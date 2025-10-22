@@ -1,0 +1,38 @@
+name: bito_ai_app
+description: "Bito AI WebView App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  permission_handler: ^11.3.0
+  file_picker: ^9.0.1
+  flutter_inappwebview: ^6.1.5
+  url_launcher: ^6.2.2
+  path_provider: ^2.1.1
+  open_filex: ^4.4.0
+  shared_preferences: ^2.2.2
+  http: ^1.1.0
+  image_picker: ^1.1.2
+  flutter_local_notifications: ^19.4.2  # ✅ تم الإضافة
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1   # ✅ أضفنا الباكدج هنا بشكل رسمي
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/logo.png"
+  min_sdk_android: 21
