@@ -58,7 +58,7 @@ Future<void> initNotifications() async {
     'ابدأ يومك بالمذاكرة مع BitoAI',
     _nextInstanceOfTime(10, 0),
     const NotificationDetails(android: androidChannel),
-
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ أضف هذا السطر
     matchDateTimeComponents: DateTimeComponents.time,
   );
 
@@ -69,6 +69,8 @@ Future<void> initNotifications() async {
     'راجع دروسك قبل نهاية اليوم مع BitoAI',
     _nextInstanceOfTime(18, 0),
     const NotificationDetails(android: androidChannel),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ أضف هذا السطر
+
     matchDateTimeComponents: DateTimeComponents.time,
   );
 }
