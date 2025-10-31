@@ -13,12 +13,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart'; // ✅ لإضافة Clipboard
 import 'IOSSubscriptionPage.dart';
-
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
 // ✅ تهيئة الإشعارات
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
+// ✅ إضافة الدالة المفقودة
+tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+  final now = tz.TZDateTime.now(tz.local);
+  var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+  if (scheduledDate.isBefore(now)) {
+    scheduledDate = scheduledDate.add(const Duration(days: 1));
+  }
+  return scheduledDate;
+}
+
 Future<void> initNotifications() async {
+  // ✅ تهيئة timezone
+  tz.initializeTimeZones();
+
   const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
   const InitializationSettings settings = InitializationSettings(
@@ -44,7 +58,6 @@ Future<void> initNotifications() async {
     'ابدأ يومك بالمذاكرة مع BitoAI',
     _nextInstanceOfTime(10, 0),
     const NotificationDetails(android: androidChannel),
-    androidAllowWhileIdle: true,
     uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     matchDateTimeComponents: DateTimeComponents.time,
   );
@@ -56,11 +69,11 @@ Future<void> initNotifications() async {
     'راجع دروسك قبل نهاية اليوم مع BitoAI',
     _nextInstanceOfTime(18, 0),
     const NotificationDetails(android: androidChannel),
-    androidAllowWhileIdle: true,
     uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     matchDateTimeComponents: DateTimeComponents.time,
   );
-} // ✅ أضف هذا القوس هنا — هذا هو التعديل فقط
+}
+
 Future<void> showNotification(String title, String body) async {
   const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
     'bito_channel',
@@ -82,6 +95,11 @@ Future<void> showNotification(String title, String body) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isAndroid) {
+    await InAppWebViewController.setWebContentsDebuggingEnabled(true);
+  }
+
   await initNotifications();
   runApp(const MyApp());
 }
@@ -396,213 +414,213 @@ class _BitoAIAppState extends State<BitoAIApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        key: _scaffoldKey,
-        endDrawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.deepPurple, Colors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      key: _scaffoldKey,
+      endDrawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple, Colors.purple],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 30,
+                    child: Icon(Icons.school, size: 30, color: Colors.deepPurple),
                   ),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: 30,
-                      child: Icon(Icons.school, size: 30, color: Colors.deepPurple),
+                  SizedBox(height: 10),
+                  Text(
+                    'Bito AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Bito AI',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  Text(
+                    'منصة التعلم الذكي',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
                     ),
-                    Text(
-                      'منصة التعلم الذكي',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.home, color: Colors.deepPurple),
-                title: const Text('الرئيسية'),
-                onTap: () {
-                  _controller.loadUrl(urlRequest: URLRequest(url: WebUri('https://studybito.com/study/')));
-                  Navigator.pop(context);
-                },
-              ),
-              // ✅ العنصر الجديد - البريد الإلكتروني
-              ListTile(
-                leading: const Icon(Icons.email, color: Colors.deepPurple),
-                title: FutureBuilder<SharedPreferences>(
-                  future: SharedPreferences.getInstance(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      final userEmail = snapshot.data!.getString('user_email') ?? 'غير معروف';
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('البريد الإلكتروني'),
-                          Text(
-                            userEmail,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home, color: Colors.deepPurple),
+              title: const Text('الرئيسية'),
+              onTap: () {
+                _controller.loadUrl(urlRequest: URLRequest(url: WebUri('https://studybito.com/study/')));
+                Navigator.pop(context);
+              },
+            ),
+            // ✅ العنصر الجديد - البريد الإلكتروني
+            ListTile(
+              leading: const Icon(Icons.email, color: Colors.deepPurple),
+              title: FutureBuilder<SharedPreferences>(
+                future: SharedPreferences.getInstance(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final userEmail = snapshot.data!.getString('user_email') ?? 'غير معروف';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('البريد الإلكتروني'),
+                        Text(
+                          userEmail,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
                           ),
-                        ],
-                      );
-                    }
-                    return const Text('البريد الإلكتروني');
-                  },
-                ),
-                onTap: () {
-                  _copyEmailToClipboard();
+                        ),
+                      ],
+                    );
+                  }
+                  return const Text('البريد الإلكتروني');
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.info, color: Colors.deepPurple),
-                title: const Text('حول التطبيق'),
-                onTap: () {
-                  showAboutDialog(
-                    context: context,
-                    applicationName: 'Bito AI',
-                    applicationVersion: '1.0.0',
-                    applicationIcon: const Icon(Icons.school, color: Colors.deepPurple),
-                  );
-                },
-              ),
-            ],
-          ),
+              onTap: () {
+                _copyEmailToClipboard();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info, color: Colors.deepPurple),
+              title: const Text('حول التطبيق'),
+              onTap: () {
+                showAboutDialog(
+                  context: context,
+                  applicationName: 'Bito AI',
+                  applicationVersion: '1.0.0',
+                  applicationIcon: const Icon(Icons.school, color: Colors.deepPurple),
+                );
+              },
+            ),
+          ],
         ),
-        body: Stack(
-            children: [
-        InAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri('https://studybito.com/study/')),
-    onWebViewCreated: (controller) {
-    _controller = controller;
-    _setupBlobHandler();
-    _setupFileHandler();
-    },
-    onLoadStart: (controller, url) {
-    setState(() {
-    isLoading = true;
-    progress = 0;
-    });
-    },
-    // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
-    if (Platform.isIOS && url.toString().contains('/price/')) {
-    controller.stopLoading();
-    Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
-    );
-    return;
-    }
+      ),
+      body: Stack(
+        children: [
+          InAppWebView(
+            initialUrlRequest: URLRequest(url: WebUri('https://studybito.com/study/')),
+            onWebViewCreated: (controller) {
+              _controller = controller;
+              _setupBlobHandler();
+              _setupFileHandler();
+            },
+            onLoadStart: (controller, url) {
+              setState(() {
+                isLoading = true;
+                progress = 0;
+              });
 
-    onProgressChanged: (controller, progress) {
-    setState(() {
-    this.progress = progress / 100;
-    });
-    },
-    onLoadStop: (controller, url) {
-    setState(() {
-    isLoading = false;
-    progress = 1.0;
-    });
-    },
-    onCreateWindow: (controller, createWindowRequest) async {
-    return true;
-    },
-    onDownloadStartRequest: (controller, downloadStartRequest) async {
-    final url = downloadStartRequest.url.toString();
-    final suggestedName = downloadStartRequest.suggestedFilename ?? 'file_${DateTime.now().millisecondsSinceEpoch}';
+              // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
+              if (Platform.isIOS && url.toString().contains('/price/')) {
+                controller.stopLoading();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+                );
+                return;
+              }
+            },
+            onProgressChanged: (controller, progress) {
+              setState(() {
+                this.progress = progress / 100;
+              });
+            },
+            onLoadStop: (controller, url) {
+              setState(() {
+                isLoading = false;
+                progress = 1.0;
+              });
+            },
+            onCreateWindow: (controller, createWindowRequest) async {
+              return true;
+            },
+            onDownloadStartRequest: (controller, downloadStartRequest) async {
+              final url = downloadStartRequest.url.toString();
+              final suggestedName = downloadStartRequest.suggestedFilename ?? 'file_${DateTime.now().millisecondsSinceEpoch}';
 
-    if (url.startsWith('blob:')) {
-    _extractBlobData(url, suggestedName);
-    } else {
-    await launchUrl(Uri.parse(url));
-    }
-    },
-    initialSettings: InAppWebViewSettings(
-    javaScriptEnabled: true,
-    allowFileAccess: true,
-    allowFileAccessFromFileURLs: true,
-    allowUniversalAccessFromFileURLs: true,
-    javaScriptCanOpenWindowsAutomatically: true,
-    supportMultipleWindows: true,
-    mediaPlaybackRequiresUserGesture: false,
-    allowContentAccess: true,
-    thirdPartyCookiesEnabled: true, // ✅ مهم جدًا لتمرير الكوكيز بين الصفحات
-    ),
-    ),
-    if (isLoading)
-    LinearProgressIndicator(
-    value: progress,
-    backgroundColor: Colors.grey[300],
-    valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-    ),
-    ],
-    ),
-    bottomNavigationBar: Container(
-    height: 65,
-    decoration: BoxDecoration(
-    color: Colors.deepPurple,
-    boxShadow: [
-    BoxShadow(
-    color: Colors.black.withOpacity(0.1),
-    blurRadius: 8,
-    offset: const Offset(0, -2),
-    ),
-    ],
-    ),
-    child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-    IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-    onPressed: () async {
-    if (await _controller.canGoBack()) {
-    _controller.goBack();
-    } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-    content: const Text('لا توجد صفحة سابقة'),
-    backgroundColor: Colors.deepPurple,
-    behavior: SnackBarBehavior.floating,
-    ),
-    );
-    }
-    },
-    ),
-    IconButton(
-    icon: const Icon(Icons.home, color: Colors.white, size: 24),
-    onPressed: () {
-    _controller.loadUrl(urlRequest: URLRequest(url: WebUri('https://studybito.com/study/')));
-    },
-    ),
-    IconButton(
-    icon: const Icon(Icons.menu, color: Colors.white, size: 24),
-    onPressed: () {
-    _scaffoldKey.currentState?.openEndDrawer();
-    },
-    ),
-    ],
-    ),
-    ),
+              if (url.startsWith('blob:')) {
+                _extractBlobData(url, suggestedName);
+              } else {
+                await launchUrl(Uri.parse(url));
+              }
+            },
+            initialSettings: InAppWebViewSettings(
+              javaScriptEnabled: true,
+              allowFileAccess: true,
+              allowFileAccessFromFileURLs: true,
+              allowUniversalAccessFromFileURLs: true,
+              javaScriptCanOpenWindowsAutomatically: true,
+              supportMultipleWindows: true,
+              mediaPlaybackRequiresUserGesture: false,
+              allowContentAccess: true,
+              thirdPartyCookiesEnabled: true, // ✅ مهم جدًا لتمرير الكوكيز بين الصفحات
+            ),
+          ),
+          if (isLoading)
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: Colors.deepPurple,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+              onPressed: () async {
+                if (await _controller.canGoBack()) {
+                  _controller.goBack();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('لا توجد صفحة سابقة'),
+                      backgroundColor: Colors.deepPurple,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.home, color: Colors.white, size: 24),
+              onPressed: () {
+                _controller.loadUrl(urlRequest: URLRequest(url: WebUri('https://studybito.com/study/')));
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white, size: 24),
+              onPressed: () {
+                _scaffoldKey.currentState?.openEndDrawer();
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -742,7 +760,8 @@ class _BitoAIAppState extends State<BitoAIApp> {
       );
     }
   }
-// ✅ أضف هنا دالة النسخ
+
+  // ✅ أضف هنا دالة النسخ
   Future<void> _copyEmailToClipboard() async {
     final prefs = await SharedPreferences.getInstance();
     final userEmail = prefs.getString('user_email') ?? 'غير معروف';
@@ -756,5 +775,4 @@ class _BitoAIAppState extends State<BitoAIApp> {
       ),
     );
   }
-} // ✅ هذا يغلق الكلاس _BitoAIAppStat
-
+}
