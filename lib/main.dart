@@ -12,6 +12,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart'; // ✅ لإضافة Clipboard
+import 'IOSSubscriptionPage.dart';
+
 
 // ✅ تهيئة الإشعارات
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -497,7 +499,17 @@ class _BitoAIAppState extends State<BitoAIApp> {
                 progress = 0;
               });
             },
-            onProgressChanged: (controller, progress) {
+    // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
+    if (Platform.isIOS && url.toString().contains('/price/')) {
+    controller.stopLoading();
+    Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+    );
+    return;
+    }
+
+    onProgressChanged: (controller, progress) {
               setState(() {
                 this.progress = progress / 100;
               });
