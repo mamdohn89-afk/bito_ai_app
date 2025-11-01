@@ -696,6 +696,10 @@ class _BitoAIAppState extends State<BitoAIApp> {
   void _extractBlobData(String blobUrl, String fileName) async {
     try {
       await _controller.evaluateJavascript(source: '''
+      function getFileExtensionFromName(filename) {
+        const match = filename.match(/\\.([a-zA-Z0-9]+)$/);
+        return match ? match[1] : 'bin';
+      }
       (async () => {
         try {
           const blobResponse = await fetch('$blobUrl');
@@ -704,7 +708,10 @@ class _BitoAIAppState extends State<BitoAIApp> {
           // 🔹 توليد اسم صحيح للملف في حال كان Unknown
           let name = "$fileName";
           if (!name || name === "Unknown" || name.startsWith("file_")) {
-            const ext = blob.type.split('/')[1] || 'bin';
+            let ext = blob.type.split('/')[1] || getFileExtensionFromName(name) || 'bin';
+            if (blob.type.includes("msword")) ext = "docx";
+            if (blob.type.includes("pdf")) ext = "pdf";
+            if (blob.type.includes("plain")) ext = "txt";
             name = "BitoAI_" + new Date().getTime() + "." + ext;
           }
 
@@ -804,4 +811,3 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 }
-
