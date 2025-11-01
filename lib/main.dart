@@ -15,6 +15,8 @@ import 'package:flutter/services.dart'; // ✅ لإضافة Clipboard
 import 'IOSSubscriptionPage.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 
 // ✅ تهيئة الإشعارات
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -33,12 +35,11 @@ Future<void> initNotifications() async {
   // ✅ تهيئة timezone
   tz.initializeTimeZones();
 
-  const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const AndroidInitializationSettings androidSettings =
+  AndroidInitializationSettings('@mipmap/ic_launcher');
   const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
-  const InitializationSettings settings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
+  const InitializationSettings settings =
+  InitializationSettings(android: androidSettings, iOS: iosSettings);
 
   await notificationsPlugin.initialize(settings);
 
@@ -51,6 +52,18 @@ Future<void> initNotifications() async {
     enableVibration: true,
   );
 
+  // ✅ إشعار ترحيبي بعد دقيقة (يعمل فور التجربة في TestFlight)
+  await notificationsPlugin.zonedSchedule(
+    100,
+    '🎉 مرحباً بك في BitoAI!',
+    'ابدأ تجربتك الآن واكتشف أدواتك الذكية.',
+    tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
+    const NotificationDetails(android: androidChannel),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    uiLocalNotificationDateInterpretation:
+    UILocalNotificationDateInterpretation.absoluteTime,
+  );
+
   // ✅ إشعار صباحي (10 صباحًا)
   await notificationsPlugin.zonedSchedule(
     0,
@@ -58,7 +71,7 @@ Future<void> initNotifications() async {
     'ابدأ يومك بالمذاكرة مع BitoAI',
     _nextInstanceOfTime(10, 0),
     const NotificationDetails(android: androidChannel),
-    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ أضف هذا السطر
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     matchDateTimeComponents: DateTimeComponents.time,
   );
 
@@ -69,8 +82,7 @@ Future<void> initNotifications() async {
     'راجع دروسك قبل نهاية اليوم مع BitoAI',
     _nextInstanceOfTime(18, 0),
     const NotificationDetails(android: androidChannel),
-    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ أضف هذا السطر
-
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     matchDateTimeComponents: DateTimeComponents.time,
   );
 }
@@ -682,40 +694,31 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 
-  void _extractBlobData(String blobUrl, String fileName) {
-    _controller.evaluateJavascript(source: '''
-      fetch('$blobUrl')
+  void _extractBlobData(String blobUrl, String fileName) async {
+    try {
+      await _controller.evaluateJavascript(source: '''
+      fetch("$blobUrl")
         .then(response => response.blob())
         .then(blob => {
           const reader = new FileReader();
           reader.onloadend = function() {
             if (window.flutter_inappwebview && reader.result) {
               window.flutter_inappwebview.callHandler('onBlobDataExtracted', {
-                data: reader.result,
-                fileName: '$fileName',
-                mimeType: blob.type
+                data: reader.result.split(',')[1],
+                fileName: "$fileName"
               });
             }
           };
           reader.readAsDataURL(blob);
         })
-        .catch(error => console.error('Error extracting blob:', error));
+        .catch(error => console.error('❌ Error fetching blob:', error));
     ''');
-
-    ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-            const SizedBox(width: 12),
-            Text('جاري معالجة $fileName...'),
-          ],
-        ),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5),
-      ),
-    );
+    } catch (e) {
+      print('❌ Blob extraction failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ أثناء معالجة الملف: $e')),
+      );
+    }
   }
 
   Future<void> _saveBase64File(String base64Data, String fileName) async {
