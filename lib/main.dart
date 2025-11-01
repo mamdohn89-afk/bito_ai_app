@@ -697,7 +697,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
     try {
       await _controller.evaluateJavascript(source: '''
       function getFileExtensionFromName(filename) {
-        const match = filename.match(/\\.([a-zA-Z0-9]+)$/);
+        const match = filename.match(/\\.([a-zA-Z0-9]+)\$/);
         return match ? match[1] : 'bin';
       }
       (async () => {
