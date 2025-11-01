@@ -705,7 +705,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
           let name = "$fileName";
           if (!name || name === "Unknown" || name.startsWith("file_")) {
             const ext = blob.type.split('/')[1] || 'bin';
-            name = "BitoAI_${Date.now()}." + ext;
+            name = "BitoAI_" + new Date().getTime() + "." + ext;
           }
 
           const reader = new FileReader();
