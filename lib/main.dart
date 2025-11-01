@@ -60,8 +60,7 @@ Future<void> initNotifications() async {
     tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
     const NotificationDetails(android: androidChannel),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    uiLocalNotificationDateInterpretation:
-    UILocalNotificationDateInterpretation.absoluteTime,
+
   );
 
   // ✅ إشعار صباحي (10 صباحًا)
