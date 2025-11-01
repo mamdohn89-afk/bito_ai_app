@@ -17,7 +17,6 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-
 // ✅ تهيئة الإشعارات
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -60,7 +59,6 @@ Future<void> initNotifications() async {
     tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
     const NotificationDetails(android: androidChannel),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-
   );
 
   // ✅ إشعار صباحي (10 صباحًا)
@@ -524,8 +522,12 @@ class _BitoAIAppState extends State<BitoAIApp> {
             initialUrlRequest: URLRequest(url: WebUri('https://studybito.com/study/')),
             onWebViewCreated: (controller) {
               _controller = controller;
-              _setupBlobHandler();
-              _setupFileHandler();
+
+              // ✅ تأخير إضافي للتأكد من جاهزية الhandlers
+              Future.delayed(const Duration(seconds: 1), () {
+                _setupBlobHandler();
+                _setupFileHandler();
+              });
             },
             onLoadStart: (controller, url) {
               setState(() {
@@ -636,14 +638,19 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 
+  // ✅ دالة جديدة لمعالجة Blob بشكل أفضل
   void _setupBlobHandler() {
     _controller.addJavaScriptHandler(
       handlerName: 'onBlobDataExtracted',
       callback: (args) {
-        if (args.isNotEmpty) {
-          final data = args[0]['data'] as String;
-          final fileName = args[0]['fileName'] as String;
-          _saveBase64File(data, fileName);
+        if (args.isNotEmpty && args[0] is Map) {
+          final data = args[0]['data']?.toString() ?? '';
+          final fileName = args[0]['fileName']?.toString() ?? 'download_${DateTime.now().millisecondsSinceEpoch}';
+          if (data.isNotEmpty) {
+            _saveBase64File(data, fileName);
+          } else {
+            print('❌ بيانات فارغة من JavaScript');
+          }
         }
       },
     );
@@ -695,54 +702,104 @@ class _BitoAIAppState extends State<BitoAIApp> {
 
   void _extractBlobData(String blobUrl, String fileName) async {
     try {
-      await _controller.evaluateJavascript(source: '''
-      (async () => {
-        try {
-          const blobResponse = await fetch('$blobUrl');
-          const blob = await blobResponse.blob();
+      // ✅ تأخير بسيط للتأكد من جاهزية الhandler
+      await Future.delayed(const Duration(milliseconds: 500));
 
-          // 🔹 توليد اسم صحيح للملف في حال كان Unknown
-          let name = "$fileName";
-          if (!name || name === "Unknown" || name.startsWith("file_")) {
-            const ext = blob.type.split('/')[1] || 'bin';
-            name = "BitoAI_${Date.now()}." + ext;
-          }
-
-          const reader = new FileReader();
-          reader.onloadend = function() {
-            const base64data = reader.result.split(',')[1];
-            if (window.flutter_inappwebview && base64data) {
-              window.flutter_inappwebview.callHandler('onBlobDataExtracted', {
-                data: base64data,
-                fileName: name,
-                mimeType: blob.type
-              });
+      final script = '''
+        (async function() {
+          try {
+            console.log('🔹 بدء استخراج Blob:', '$blobUrl');
+            const response = await fetch('$blobUrl');
+            if (!response.ok) {
+              throw new Error('فشل fetch: ' + response.status);
             }
-          };
-          reader.readAsDataURL(blob);
-        } catch (err) {
-          console.error("❌ Blob extraction error:", err);
-        }
-      })();
-    ''');
+            const blob = await response.blob();
+            console.log('🔹 حجم Blob:', blob.size, 'نوع:', blob.type);
 
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        const SnackBar(
-          content: Text('⏳ جاري معالجة الملف...'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
+            // ✅ إنشاء اسم ملف افتراضي إذا كان غير صالح
+            let finalName = "$fileName";
+            if (!finalName || finalName === "Unknown" || finalName.includes("file_")) {
+              const ext = blob.type.split('/')[1] || 'bin';
+              finalName = "BitoAI_" + Date.now() + "." + ext;
+            }
+
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = function() {
+                console.log('🔹 تم قراءة البيانات بنجاح');
+                const result = reader.result;
+                if (result && typeof result === 'string') {
+                  const base64Data = result.split(',')[1];
+                  if (base64Data) {
+                    resolve({
+                      data: base64Data,
+                      fileName: finalName,
+                      mimeType: blob.type,
+                      size: blob.size
+                    });
+                  } else {
+                    reject(new Error('فشل في استخراج base64'));
+                  }
+                } else {
+                  reject(new Error('نتيجة FileReader غير صالحة'));
+                }
+              };
+              reader.onerror = function(error) {
+                reject(new Error('FileReader error: ' + error));
+              };
+              reader.readAsDataURL(blob);
+            });
+          } catch (error) {
+            console.error('❌ خطأ في JavaScript:', error);
+            throw error;
+          }
+        })()
+      ''';
+
+      final result = await _controller.evaluateJavascript(source: script);
+
+      if (result != null) {
+        print('✅ تم استخراج البيانات بنجاح من JavaScript');
+      } else {
+        print('⚠️ لم يتم إرجاع بيانات من JavaScript');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⏳ جاري تحميل الملف...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
     } catch (e) {
-      print('❌ Blob extraction failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء استخراج الملف: $e')),
-      );
+      print('❌ فشل استخراج Blob: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فشل التحميل: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
+
   Future<void> _saveBase64File(String base64Data, String fileName) async {
+    // ✅ تحقق من وجود context
+    if (!mounted) return;
+
     try {
+      print('🔹 بدء حفظ الملف: $fileName');
+
+      // ✅ تنظيف البيانات
       final cleanData = base64Data.replaceFirst(RegExp(r'data:[^;]+;base64,'), '');
+      if (cleanData.isEmpty) {
+        throw Exception('بيانات base64 فارغة');
+      }
+
       final bytes = base64.decode(cleanData);
       final directory = Platform.isIOS
           ? await getApplicationDocumentsDirectory() // 📁 مسار داخلي خاص للتطبيق في iOS
@@ -756,31 +813,35 @@ class _BitoAIAppState extends State<BitoAIApp> {
 
       await showNotification('تم التحميل بنجاح ✅', 'تم تحميل $fileName بنجاح');
 
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(child: Text('تم تحميل $fileName بنجاح')),
-            ],
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('تم تحميل $fileName بنجاح')),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+        );
+      }
 
-      print('تم حفظ الملف: $filePath');
+      print('✅ تم حفظ الملف: $filePath');
     } catch (e) {
-      print('Error saving file: $e');
+      print('❌ Error saving file: $e');
       await showNotification('خطأ في التحميل ❌', 'حدث خطأ أثناء تحميل $fileName');
-      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
-        SnackBar(
-          content: Text('خطأ في تحميل الملف: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحميل الملف: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -799,4 +860,3 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 }
-
