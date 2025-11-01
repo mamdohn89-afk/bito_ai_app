@@ -696,30 +696,50 @@ class _BitoAIAppState extends State<BitoAIApp> {
   void _extractBlobData(String blobUrl, String fileName) async {
     try {
       await _controller.evaluateJavascript(source: '''
-      fetch("$blobUrl")
-        .then(response => response.blob())
-        .then(blob => {
+      (async () => {
+        try {
+          const blobResponse = await fetch('$blobUrl');
+          const blob = await blobResponse.blob();
+
+          // 🔹 توليد اسم صحيح للملف في حال كان Unknown
+          let name = "$fileName";
+          if (!name || name === "Unknown" || name.startsWith("file_")) {
+            const ext = blob.type.split('/')[1] || 'bin';
+            name = "BitoAI_${Date.now()}." + ext;
+          }
+
           const reader = new FileReader();
           reader.onloadend = function() {
-            if (window.flutter_inappwebview && reader.result) {
+            const base64data = reader.result.split(',')[1];
+            if (window.flutter_inappwebview && base64data) {
               window.flutter_inappwebview.callHandler('onBlobDataExtracted', {
-                data: reader.result.split(',')[1],
-                fileName: "$fileName"
+                data: base64data,
+                fileName: name,
+                mimeType: blob.type
               });
             }
           };
           reader.readAsDataURL(blob);
-        })
-        .catch(error => console.error('❌ Error fetching blob:', error));
+        } catch (err) {
+          console.error("❌ Blob extraction error:", err);
+        }
+      })();
     ''');
+
+      ScaffoldMessenger.of(_scaffoldKey.currentContext!).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ جاري معالجة الملف...'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
       print('❌ Blob extraction failed: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ أثناء معالجة الملف: $e')),
+        SnackBar(content: Text('حدث خطأ أثناء استخراج الملف: $e')),
       );
     }
   }
-
   Future<void> _saveBase64File(String base64Data, String fileName) async {
     try {
       final cleanData = base64Data.replaceFirst(RegExp(r'data:[^;]+;base64,'), '');
@@ -727,7 +747,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
       final directory = Platform.isIOS
           ? await getApplicationDocumentsDirectory() // 📁 مسار داخلي خاص للتطبيق في iOS
           : await getExternalStorageDirectory();     // 📁 المسار العادي في Android
-      final filePath = '${directory?.path}/Download/$fileName';
+      final filePath = '${directory?.path}/$fileName';
       final file = File(filePath);
 
       await file.parent.create(recursive: true);
