@@ -16,7 +16,6 @@ import 'IOSSubscriptionPage.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
-
 // ✅ تهيئة الإشعارات
 final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -59,7 +58,6 @@ Future<void> initNotifications() async {
     tz.TZDateTime.now(tz.local).add(const Duration(minutes: 1)),
     const NotificationDetails(android: androidChannel),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-
   );
 
   // ✅ إشعار صباحي (10 صباحًا)
@@ -533,7 +531,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
                 progress = 0;
               });
 
-// ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
+              // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
               if (Platform.isIOS) {
                 final lowerUrl = url.toString().toLowerCase();
                 if (lowerUrl.contains('/price') || lowerUrl.contains('pricing')) {
@@ -750,6 +748,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
       );
     }
   }
+
   Future<void> _saveBase64File(String base64Data, String fileName) async {
     try {
       final cleanData = base64Data.replaceFirst(RegExp(r'data:[^;]+;base64,'), '');
@@ -799,6 +798,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
       );
     }
   }
+
   // ✅ أضف هنا دالة النسخ
   Future<void> _copyEmailToClipboard() async {
     final prefs = await SharedPreferences.getInstance();
@@ -813,5 +813,4 @@ class _BitoAIAppState extends State<BitoAIApp> {
       ),
     );
   }
-
-
+}
