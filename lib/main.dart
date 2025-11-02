@@ -15,7 +15,6 @@ import 'package:flutter/services.dart'; // ✅ لإضافة Clipboard
 import 'IOSSubscriptionPage.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 
 // ✅ تهيئة الإشعارات
@@ -113,6 +112,7 @@ void main() async {
   }
 
   await initNotifications();
+  print('✅ التطبيق بدأ بنجاح وتم تهيئة الإشعارات');
   runApp(const MyApp());
 }
 
@@ -533,20 +533,17 @@ class _BitoAIAppState extends State<BitoAIApp> {
                 progress = 0;
               });
 
-              // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
-    if (Platform.isIOS) {
-    final lowerUrl = url.toString().toLowerCase();
-    if (lowerUrl.contains('/price') || lowerUrl.contains('pricing')) {
-    controller.stopLoading();
-    Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
-    );
-    return;
-    }
-    }
-
-    
+// ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
+              if (Platform.isIOS) {
+                final lowerUrl = url.toString().toLowerCase();
+                if (lowerUrl.contains('/price') || lowerUrl.contains('pricing')) {
+                  controller.stopLoading();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+                  );
+                  return;
+                }
               }
             },
             onProgressChanged: (controller, progress) {
@@ -816,4 +813,5 @@ class _BitoAIAppState extends State<BitoAIApp> {
       ),
     );
   }
-}
+
+
