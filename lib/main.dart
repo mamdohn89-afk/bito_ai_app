@@ -534,13 +534,19 @@ class _BitoAIAppState extends State<BitoAIApp> {
               });
 
               // ✅ تحويل مستخدم iOS إلى صفحة الاشتراكات الداخلية
-              if (Platform.isIOS && url.toString().contains('/price/')) {
-                controller.stopLoading();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
-                );
-                return;
+    if (Platform.isIOS) {
+    final lowerUrl = url.toString().toLowerCase();
+    if (lowerUrl.contains('/price') || lowerUrl.contains('pricing')) {
+    controller.stopLoading();
+    Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+    );
+    return;
+    }
+    }
+
+    
               }
             },
             onProgressChanged: (controller, progress) {

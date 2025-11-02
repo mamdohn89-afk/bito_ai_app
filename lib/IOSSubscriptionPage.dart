@@ -54,6 +54,11 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
         // إرسال الإيصال للتحقق في السيرفر
         await _verifyPurchaseWithServer(purchase);
+        // 🔒 تأكيد العملية لدى Apple
+        if (purchase.pendingCompletePurchase) {
+          await _iap.completePurchase(purchase);
+        }
+
 
         // ✅ بعد نجاح الدفع، توجيه المستخدم
         if (mounted) {
