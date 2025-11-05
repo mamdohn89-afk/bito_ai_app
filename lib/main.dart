@@ -516,21 +516,21 @@ class _BitoAIAppState extends State<BitoAIApp> {
             ListTile(
               leading: const Icon(Icons.privacy_tip, color: Colors.deepPurple),
               title: const Text('سياسة الخصوصية'),
-              onTap: () async {
-                const url = 'https://studybito.com/privacy-policy/';
-                if (await canLaunchUrl(Uri.parse(url))) {
-                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                }
+              onTap: () {
+                _controller.loadUrl(
+                  urlRequest: URLRequest(url: WebUri('https://studybito.com/privacy-policy/')),
+                );
+                Navigator.pop(context);
               },
             ),
             ListTile(
               leading: const Icon(Icons.rule, color: Colors.deepPurple),
               title: const Text('الشروط والأحكام'),
-              onTap: () async {
-                const url = 'https://studybito.com/terms-of-use/';
-                if (await canLaunchUrl(Uri.parse(url))) {
-                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                }
+              onTap: () {
+                _controller.loadUrl(
+                  urlRequest: URLRequest(url: WebUri('https://studybito.com/terms-of-use/')),
+                );
+                Navigator.pop(context);
               },
             ),
           ],
