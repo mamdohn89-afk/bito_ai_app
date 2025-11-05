@@ -513,6 +513,26 @@ class _BitoAIAppState extends State<BitoAIApp> {
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip, color: Colors.deepPurple),
+              title: const Text('سياسة الخصوصية'),
+              onTap: () async {
+                const url = 'https://studybito.com/privacy-policy/';
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.rule, color: Colors.deepPurple),
+              title: const Text('الشروط والأحكام'),
+              onTap: () async {
+                const url = 'https://studybito.com/terms-of-use/';
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
           ],
         ),
       ),
@@ -658,6 +678,17 @@ class _BitoAIAppState extends State<BitoAIApp> {
           source: ImageSource.camera,
           imageQuality: 90,
         );
+        // ✅ لفتح صفحة اشتراك iOS من داخل WebView
+        _controller.addJavaScriptHandler(
+          handlerName: 'openIOSSubscriptionPage',
+          callback: (args) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+            );
+          },
+        );
+
         if (pickedFile != null) {
           final file = File(pickedFile.path);
           final bytes = await file.readAsBytes();
@@ -814,3 +845,4 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 }
+
