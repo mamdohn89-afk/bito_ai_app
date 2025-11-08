@@ -228,3 +228,4 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     );
   }
 }
+
