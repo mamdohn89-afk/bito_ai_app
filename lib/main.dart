@@ -425,6 +425,26 @@ class _BitoAIAppState extends State<BitoAIApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
+        // ✅ زر الاشتراك يظهر فقط في iOS
+        floatingActionButton: Platform.isIOS
+            ? FloatingActionButton.extended(
+          backgroundColor: Colors.deepPurple,
+          icon: const Icon(Icons.star, color: Colors.white),
+          label: const Text(
+            'اشترك في Bito Plus',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const IOSSubscriptionPage()),
+            );
+          },
+        )
+            : null,
+
+        endDrawer: Drawer(
+            child: ListView(
       endDrawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
