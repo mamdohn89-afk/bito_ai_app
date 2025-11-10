@@ -425,9 +425,10 @@ class _BitoAIAppState extends State<BitoAIApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-        // ✅ زر الاشتراك يظهر فقط في iOS
-        floatingActionButton: Platform.isIOS
-            ? FloatingActionButton.extended(
+      // ✅ زر الاشتراك يظهر فقط في iOS
+      floatingActionButton: Platform.isIOS
+
+          ? FloatingActionButton.extended(
           backgroundColor: Colors.deepPurple,
           icon: const Icon(Icons.star, color: Colors.white),
           label: const Text(
@@ -445,8 +446,6 @@ class _BitoAIAppState extends State<BitoAIApp> {
 
         endDrawer: Drawer(
             child: ListView(
-      endDrawer: Drawer(
-        child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
