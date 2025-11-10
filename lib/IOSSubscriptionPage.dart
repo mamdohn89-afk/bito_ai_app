@@ -33,7 +33,17 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
   // ✅ تحميل المنتجات من App Store
   Future<void> _loadProducts() async {
+    final bool available = await _iap.isAvailable();
+    if (!available) {
+      setState(() {
+        _loading = false;
+      });
+      _showDialog("⚠️ غير متاح", "خدمة الشراء من داخل التطبيق غير متاحة حالياً. يرجى التأكد من إعدادات App Store.");
+      return;
+    }
+
     final response = await _iap.queryProductDetails(_productIds.toSet());
+
     if (mounted) {
       setState(() {
         _products = response.productDetails;
@@ -42,7 +52,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     }
 
     if (response.notFoundIDs.isNotEmpty) {
-      _showDialog("خطأ", "تعذر تحميل بعض الباقات من App Store.");
+      _showDialog("خطأ", "تعذر تحميل بعض الباقات: ${response.notFoundIDs.join(', ')}");
     }
   }
 
@@ -57,8 +67,6 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     for (var purchase in purchases) {
       if (purchase.status == PurchaseStatus.purchased) {
         _showSnack("✅ جاري التحقق من الدفع...");
-
-        // تحقق من الإيصال عبر السيرفر
         await _verifyPurchaseWithServer(purchase);
 
         if (purchase.pendingCompletePurchase) {
@@ -66,10 +74,10 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         }
 
         if (mounted) {
-          Navigator.pop(context); // ✅ يرجع لصفحة study
+          Navigator.pop(context); // ✅ يرجع إلى صفحة study
         }
       } else if (purchase.status == PurchaseStatus.error) {
-        _showDialog("خطأ في الدفع", purchase.error?.message ?? "حدث خطأ غير متوقع أثناء الشراء.");
+        _showDialog("❌ خطأ في الدفع", purchase.error?.message ?? "حدث خطأ غير متوقع أثناء الشراء.");
       }
     }
   }
@@ -217,15 +225,23 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           : ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.weekly',
-              orElse: () => _products.first), "اشتراك أسبوعي (7 أيام)", Icons.calendar_view_week),
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.monthly',
-              orElse: () => _products.first), "اشتراك شهري (30 يوم)", Icons.calendar_month),
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.yearly',
-              orElse: () => _products.first), "اشتراك سنوي (365 يوم)", Icons.workspace_premium),
+          _buildPlanCard(
+            _products.firstWhere((p) => p.id == 'bito.weekly', orElse: () => _products.first),
+            "اشتراك أسبوعي (7 أيام)",
+            Icons.calendar_view_week,
+          ),
+          _buildPlanCard(
+            _products.firstWhere((p) => p.id == 'bito.monthly', orElse: () => _products.first),
+            "اشتراك شهري (30 يوم)",
+            Icons.calendar_month,
+          ),
+          _buildPlanCard(
+            _products.firstWhere((p) => p.id == 'bito.yearly', orElse: () => _products.first),
+            "اشتراك سنوي (365 يوم)",
+            Icons.workspace_premium,
+          ),
         ],
       ),
     );
   }
 }
-
