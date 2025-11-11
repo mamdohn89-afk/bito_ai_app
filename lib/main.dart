@@ -533,31 +533,17 @@ class _BitoAIAppState extends State<BitoAIApp> {
                 Navigator.pop(context);
               },
             ),
-            // ✅ زر الاشتراك يظهر فقط في أجهزة iOS
             if (Platform.isIOS)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context); // إغلاق القائمة
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.star, color: Colors.white),
-                  label: const Text(
-                    'اشترك في Bito Plus',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    shadowColor: Colors.purpleAccent,
-                    elevation: 4,
-                  ),
-                ),
+              ListTile(
+                leading: const Text("💎", style: TextStyle(fontSize: 20)),
+                title: const Text('الاشتراك في بيتو +'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+                  );
+                },
               ),
 
           ],
@@ -872,3 +858,4 @@ class _BitoAIAppState extends State<BitoAIApp> {
     );
   }
 }
+

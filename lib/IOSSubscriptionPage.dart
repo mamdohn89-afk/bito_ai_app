@@ -17,8 +17,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   bool _loading = true;
   bool _storeAvailable = false;
   List<ProductDetails> _products = [];
-  final List<String> _productIds = ['bito.weekly', 'bito.monthly', 'bito.yearly'];
-
+  final List<String> _productIds = ['bito.weekly2', 'bito.monthly2', 'bito.yearly2'];
   @override
   void initState() {
     super.initState();
@@ -198,14 +197,15 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           : ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.weekly', orElse: () => _products.first),
+          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.weekly2', orElse: () => _products.first),
               "اشتراك أسبوعي (7 أيام)", Icons.calendar_view_week),
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.monthly', orElse: () => _products.first),
+          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.monthly2', orElse: () => _products.first),
               "اشتراك شهري (30 يوم)", Icons.calendar_month),
-          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.yearly', orElse: () => _products.first),
+          _buildPlanCard(_products.firstWhere((p) => p.id == 'bito.yearly2', orElse: () => _products.first),
               "اشتراك سنوي (365 يوم)", Icons.workspace_premium),
         ],
       ),
     );
   }
 }
+
