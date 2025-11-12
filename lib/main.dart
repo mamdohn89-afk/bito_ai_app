@@ -557,6 +557,17 @@ class _BitoAIAppState extends State<BitoAIApp> {
               _controller = controller;
               _setupBlobHandler();
               _setupFileHandler();
+
+              // ✅ الجسر الذي يفتح صفحة الاشتراكات داخل التطبيق
+              _controller.addJavaScriptHandler(
+                handlerName: 'openIOSSubscriptionPage',
+                callback: (args) async {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const IOSSubscriptionPage()),
+                  );
+                },
+              );
             },
             onLoadStart: (controller, url) {
               setState(() {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class IOSSubscriptionPage extends StatefulWidget {
   const IOSSubscriptionPage({super.key});
@@ -19,40 +20,40 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   List<ProductDetails> _products = [];
   final List<String> _productIds = ['bito.weekly2', 'bito.monthly2', 'bito.yearly2'];
 
-  // بيانات تجريبية مفصلة للمراجعة
+  // بيانات الباقات المعدلة بالريال السعودي
   final List<Map<String, dynamic>> _demoProductsData = [
     {
       'id': 'bito.weekly2',
       'title': 'Bito Plus - أسبوعي',
-      'description': 'اشتراك أسبوعي كامل مع جميع الميزات',
-      'price': '٦٫٩٩ USD',
-      'rawPrice': 6.99,
-      'currencyCode': 'USD',
-      'label': 'اشتراك أسبوعي (7 أيام)',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'price': '٢٩٫٩٩ ر.س',
+      'rawPrice': 29.99,
+      'currencyCode': 'SAR',
+      'label': '7 أيام',
       'icon': Icons.calendar_view_week,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام']
     },
     {
       'id': 'bito.monthly2',
       'title': 'Bito Plus - شهري',
-      'description': 'اشتراك شهري كامل مع جميع الميزات',
-      'price': '١٩٫٩٩ USD',
-      'rawPrice': 19.99,
-      'currencyCode': 'USD',
-      'label': 'اشتراك شهري (30 يوم)',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'price': '٧٩٫٩٩ ر.س',
+      'rawPrice': 79.99,
+      'currencyCode': 'SAR',
+      'label': '30 يوم',
       'icon': Icons.calendar_month,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', 'تحديثات مستمرة']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم']
     },
     {
       'id': 'bito.yearly2',
       'title': 'Bito Plus - سنوي',
-      'description': 'اشتراك سنوي كامل مع خصم خاص',
-      'price': '٩٩٫٩٩ USD',
-      'rawPrice': 99.99,
-      'currencyCode': 'USD',
-      'label': 'اشتراك سنوي (365 يوم)',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'price': '٢٩٩٫٩٩ ر.س',
+      'rawPrice': 299.99,
+      'currencyCode': 'SAR',
+      'label': '365 يوم',
       'icon': Icons.workspace_premium,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', 'تحديثات مستمرة', 'وفر 58%']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم', 'وفر 62%']
     },
   ];
 
@@ -375,6 +376,9 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   }
 
   void _showPurchaseSuccess(ProductDetails product) {
+    // 🔥 تفعيل الباقة حتى في التجربة
+    _activateDemoSubscription(product);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -435,6 +439,40 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _activateDemoSubscription(ProductDetails product) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userEmail = prefs.getString('user_email') ?? '';
+
+      if (userEmail.isEmpty) {
+        print('❌ لم يتم العثور على إيميل المستخدم');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse("https://studybito.com/wp-json/bito/v1/demo_subscription"),
+        body: {
+          'product_id': product.id,
+          'user_email': userEmail,
+          'is_demo': 'true'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ تم تفعيل الباقة التجريبية: ${data['plan']} للمستخدم: $userEmail');
+        } else {
+          print('❌ فشل تفعيل الباقة: ${data['message']}');
+        }
+      } else {
+        print('❌ خطأ في السيرفر: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ خطأ في التفعيل التجريبي: $e');
+    }
   }
 
   Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchases) async {
@@ -509,174 +547,158 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   Widget _buildPlanCard(ProductDetails product, Map<String, dynamic> productData) {
     final bool isStoreAvailable = _storeAvailable && _products.isNotEmpty;
 
-    return Card(
-      elevation: 6,
-      margin: const EdgeInsets.all(12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              Colors.deepPurple.shade600,
-              Colors.purple.shade600,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // الأيقونة والعنوان
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(productData['icon'] as IconData, color: Colors.white, size: 32),
-                const SizedBox(width: 8),
-                Text(
-                  productData['label'],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                Colors.deepPurple.shade600,
+                Colors.purple.shade600,
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-
-            const SizedBox(height: 16),
-
-            // العنوان الرئيسي
-            Text(
-              product.title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // الوصف
-            Text(
-              product.description,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 14,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // السعر
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                product.price,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // الميزات
-            ...(productData['features'] as List<String>).map((feature) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // العنوان والمدة
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade300, size: 18),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      feature,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                      product.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      productData['label'],
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-            )).toList(),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-            // زر الشراء
-            ElevatedButton(
-              onPressed: () => _handlePurchase(product),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.deepPurple,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
+              // السعر
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 4,
+                child: Text(
+                  product.price,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
+
+              const SizedBox(height: 12),
+
+              // الميزات
+              Column(
+                children: (productData['features'] as List<String>).map((feature) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade300, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          feature,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // زر الشراء
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _handlePurchase(product),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepPurple,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: const Text(
                     "اشترك الآن",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple.shade700,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, color: Colors.deepPurple.shade700),
-                ],
+                ),
               ),
-            ),
 
-            // مؤشر حالة المتجر
-            if (!isStoreAvailable) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.schedule, color: Colors.amber.shade700, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      "قيد المراجعة",
-                      style: TextStyle(
-                        color: Colors.amber.shade800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+              // مؤشر حالة المتجر
+              if (!isStoreAvailable) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.amber),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.schedule, color: Colors.amber.shade700, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        "قيد المراجعة",
+                        style: TextStyle(
+                          color: Colors.amber.shade800,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -732,25 +754,25 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                 Icon(
                   Icons.workspace_premium,
                   color: Colors.deepPurple,
-                  size: 48,
+                  size: 40,
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   "ارتقِ بتجربة التعلم مع Bito Plus",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.deepPurple,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   isStoreAvailable
                       ? "اختر الباقة المناسبة لك وابدأ رحلة التعلم الذكي"
                       : "💎 الباقات معروضة للمراجعة - النظام جاهز للتشغيل",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: Colors.deepPurple.withOpacity(0.7),
                   ),
                 ),
@@ -761,7 +783,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           // قائمة الباقات
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: displayProducts.map((product) {
                 final productData = _demoProductsData.firstWhere(
                         (data) => data['id'] == product.id,
