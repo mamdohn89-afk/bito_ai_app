@@ -536,7 +536,7 @@ class _BitoAIAppState extends State<BitoAIApp> {
             if (Platform.isIOS)
               ListTile(
                 leading: const Text("💎", style: TextStyle(fontSize: 20)),
-                title: const Text('الاشتراك في بيتو +'),
+                title: const Text('الاشتراك في بيتو '),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(

@@ -18,12 +18,13 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   bool _loading = true;
   bool _storeAvailable = false;
   List<ProductDetails> _products = [];
-  final List<String> _productIds = ['bito.weekly2', 'bito.monthly2', 'bito.yearly2'];
+  final List<String> _productIds = ['bito.weekly1', 'bito.monthly1', 'bito.yearly1'];
+
 
   // بيانات الباقات المعدلة بالريال السعودي
   final List<Map<String, dynamic>> _demoProductsData = [
     {
-      'id': 'bito.weekly2',
+      'id': 'bito.weekly1',
       'title': 'Bito Plus - أسبوعي',
       'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٢٩٫٩٩ ر.س',
@@ -34,7 +35,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام']
     },
     {
-      'id': 'bito.monthly2',
+      'id': 'bito.monthly1',
       'title': 'Bito Plus - شهري',
       'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٧٩٫٩٩ ر.س',
@@ -45,7 +46,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم']
     },
     {
-      'id': 'bito.yearly2',
+      'id': 'bito.yearly1',
       'title': 'Bito Plus - سنوي',
       'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٢٩٩٫٩٩ ر.س',
@@ -715,7 +716,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             price: "٢٩٫٩٩ ر.س",
             duration: "7 أيام",
             onTap: () => _handlePurchase(
-              displayProducts.firstWhere((p) => p.id == "bito.weekly2"),
+              displayProducts.firstWhere((p) => p.id == "bito.weekly1"),
             ),
           ),
 
@@ -725,7 +726,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             price: "٧٩٫٩٩ ر.س",
             duration: "30 يوم",
             onTap: () => _handlePurchase(
-              displayProducts.firstWhere((p) => p.id == "bito.monthly2"),
+              displayProducts.firstWhere((p) => p.id == "bito.monthly1"),
             ),
           ),
 
@@ -736,7 +737,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             duration: "365 يوم",
             saveTag: "🔥 وفر 69%",
             onTap: () => _handlePurchase(
-              displayProducts.firstWhere((p) => p.id == "bito.yearly2"),
+              displayProducts.firstWhere((p) => p.id == "bito.yearly1"),
             ),
           ),
         ],
