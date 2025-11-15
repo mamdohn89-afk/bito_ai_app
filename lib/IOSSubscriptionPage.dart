@@ -24,36 +24,39 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   final List<Map<String, dynamic>> _demoProductsData = [
     {
       'id': 'bito.weekly2',
-      'title': 'Bito Plus - أسبوعي',
-      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'title': 'الباقة الأسبوعية',
+      'description': 'استخدام لا محدود لمدة 7 أيام',
       'price': '٢٩٫٩٩ ر.س',
       'rawPrice': 29.99,
       'currencyCode': 'SAR',
       'label': '7 أيام',
       'icon': Icons.calendar_view_week,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام'],
+      'discount': null,
     },
     {
       'id': 'bito.monthly2',
-      'title': 'Bito Plus - شهري',
-      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'title': 'الباقة الشهرية',
+      'description': 'استخدام لا محدود لمدة 30 يوم',
       'price': '٧٩٫٩٩ ر.س',
       'rawPrice': 79.99,
       'currencyCode': 'SAR',
       'label': '30 يوم',
       'icon': Icons.calendar_month,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم'],
+      'discount': null,
     },
     {
       'id': 'bito.yearly2',
-      'title': 'Bito Plus - سنوي',
-      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
+      'title': 'الباقة السنوية',
+      'description': 'استخدام لا محدود لمدة 365 يوم',
       'price': '٢٩٩٫٩٩ ر.س',
       'rawPrice': 299.99,
       'currencyCode': 'SAR',
       'label': '365 يوم',
       'icon': Icons.workspace_premium,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم', 'وفر 62%']
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم'],
+      'discount': 'وفر 69%',
     },
   ];
 
@@ -564,36 +567,33 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               end: Alignment.bottomRight,
             ),
           ),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // العنوان والمدة
+              // اسم الباقة والسعر في نفس السطر
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      product.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Icon(productData['icon'] as IconData, color: Colors.white, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        product.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      productData['label'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Text(
+                    product.price,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -601,21 +601,14 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
               const SizedBox(height: 12),
 
-              // السعر
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              // وصف الباقة
+              Align(
+                alignment: Alignment.centerRight,
                 child: Text(
-                  product.price,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  productData['description'],
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ),
@@ -643,6 +636,27 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                   ),
                 )).toList(),
               ),
+
+              // خصم الباقة السنوية
+              if (productData['discount'] != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Text(
+                    productData['discount'],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -783,6 +797,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           // قائمة الباقات
           Expanded(
             child: ListView(
+              physics: const NeverScrollableScrollPhysics(), // منع السكرول
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: displayProducts.map((product) {
                 final productData = _demoProductsData.firstWhere(
