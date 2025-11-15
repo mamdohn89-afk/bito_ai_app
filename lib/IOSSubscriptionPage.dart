@@ -24,39 +24,36 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   final List<Map<String, dynamic>> _demoProductsData = [
     {
       'id': 'bito.weekly2',
-      'title': 'الباقة الأسبوعية',
-      'description': 'استخدام لا محدود لمدة 7 أيام',
+      'title': 'Bito Plus - أسبوعي',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٢٩٫٩٩ ر.س',
       'rawPrice': 29.99,
       'currencyCode': 'SAR',
       'label': '7 أيام',
       'icon': Icons.calendar_view_week,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام'],
-      'discount': null,
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '7 أيام']
     },
     {
       'id': 'bito.monthly2',
-      'title': 'الباقة الشهرية',
-      'description': 'استخدام لا محدود لمدة 30 يوم',
+      'title': 'Bito Plus - شهري',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٧٩٫٩٩ ر.س',
       'rawPrice': 79.99,
       'currencyCode': 'SAR',
       'label': '30 يوم',
       'icon': Icons.calendar_month,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم'],
-      'discount': null,
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '30 يوم']
     },
     {
       'id': 'bito.yearly2',
-      'title': 'الباقة السنوية',
-      'description': 'استخدام لا محدود لمدة 365 يوم',
+      'title': 'Bito Plus - سنوي',
+      'description': 'اشتراك لا محدود لجميع خدمات بيتو',
       'price': '٢٩٩٫٩٩ ر.س',
       'rawPrice': 299.99,
       'currencyCode': 'SAR',
       'label': '365 يوم',
       'icon': Icons.workspace_premium,
-      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم'],
-      'discount': 'وفر 69%',
+      'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم', 'وفر 62%']
     },
   ];
 
@@ -547,173 +544,110 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     );
   }
 
-  Widget _buildPlanCard(ProductDetails product, Map<String, dynamic> productData) {
-    final bool isStoreAvailable = _storeAvailable && _products.isNotEmpty;
-
+  Widget _buildSimplePlan({
+    required String title,
+    required String price,
+    required String duration,
+    required VoidCallback onTap,
+    String? saveTag,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.deepPurple.shade600,
-                Colors.purple.shade600,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.deepPurple.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // العنوان + وسم التوفير
+          Row(
             children: [
-              // اسم الباقة والسعر في نفس السطر
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(productData['icon'] as IconData, color: Colors.white, size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        product.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    product.price,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // وصف الباقة
-              Align(
-                alignment: Alignment.centerRight,
+              Expanded(
                 child: Text(
-                  productData['description'],
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              // الميزات
-              Column(
-                children: (productData['features'] as List<String>).map((feature) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green.shade300, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
-              ),
-
-              // خصم الباقة السنوية
-              if (productData['discount'] != null) ...[
-                const SizedBox(height: 8),
+              if (saveTag != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: Colors.orange.shade600,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
                   ),
                   child: Text(
-                    productData['discount'],
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 16),
-
-              // زر الشراء
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _handlePurchase(product),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    "اشترك الآن",
-                    style: TextStyle(
-                      fontSize: 16,
+                    saveTag,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ),
-
-              // مؤشر حالة المتجر
-              if (!isStoreAvailable) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.amber),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.schedule, color: Colors.amber.shade700, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        "قيد المراجعة",
-                        style: TextStyle(
-                          color: Colors.amber.shade800,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
-        ),
+
+          const SizedBox(height: 10),
+
+          // السعر
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // المدة
+          Text(
+            duration,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // زر الاشتراك
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "اشترك الآن",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -754,58 +688,55 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       )
           : Column(
         children: [
-          // رسالة ترحيبية
+          // ⭐ رسالة الاستخدام اللامحدود
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.deepPurple.shade50, Colors.purple.shade50],
-              ),
+              color: Colors.deepPurple.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
             ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.workspace_premium,
-                  color: Colors.deepPurple,
-                  size: 40,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "ارتقِ بتجربة التعلم مع Bito Plus",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  isStoreAvailable
-                      ? "اختر الباقة المناسبة لك وابدأ رحلة التعلم الذكي"
-                      : "💎 الباقات معروضة للمراجعة - النظام جاهز للتشغيل",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.deepPurple.withOpacity(0.7),
-                  ),
-                ),
-              ],
+            child: const Text(
+              "⭐ جميع الباقات تأتي مع استخدام لا محدود",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
             ),
           ),
 
-          // قائمة الباقات
-          Expanded(
-            child: ListView(
-              physics: const NeverScrollableScrollPhysics(), // منع السكرول
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: displayProducts.map((product) {
-                final productData = _demoProductsData.firstWhere(
-                        (data) => data['id'] == product.id,
-                    orElse: () => _demoProductsData.first
-                );
-                return _buildPlanCard(product, productData);
-              }).toList(),
+          // 🟪 الباقة الأسبوعية
+          _buildSimplePlan(
+            title: "الباقة الأسبوعية",
+            price: "٢٩٫٩٩ ر.س",
+            duration: "7 أيام",
+            onTap: () => _handlePurchase(
+              displayProducts.firstWhere((p) => p.id == "bito.weekly2"),
+            ),
+          ),
+
+          // 🟪 الباقة الشهرية
+          _buildSimplePlan(
+            title: "الباقة الشهرية",
+            price: "٧٩٫٩٩ ر.س",
+            duration: "30 يوم",
+            onTap: () => _handlePurchase(
+              displayProducts.firstWhere((p) => p.id == "bito.monthly2"),
+            ),
+          ),
+
+          // 🟪 الباقة السنوية + وفر 69%
+          _buildSimplePlan(
+            title: "الباقة السنوية",
+            price: "٢٩٩٫٩٩ ر.س",
+            duration: "365 يوم",
+            saveTag: "🔥 وفر 69%",
+            onTap: () => _handlePurchase(
+              displayProducts.firstWhere((p) => p.id == "bito.yearly2"),
             ),
           ),
         ],
