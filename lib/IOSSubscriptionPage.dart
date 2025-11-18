@@ -496,17 +496,30 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     const secret = "06acbbcf779f421589311198fddf70ee";
     final receiptData = purchase.verificationData.serverVerificationData;
 
+    // 🔥 جلب الإيميل والتوكن
+    final prefs = await SharedPreferences.getInstance();
+    final userEmail = prefs.getString('user_email') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
+
+    print("🔎 Email Sent: $userEmail");
+    print("🔎 Token Sent: $token");
+
     try {
       final response = await http.post(
         Uri.parse("https://studybito.com/wp-json/bito/v1/verify_ios_receipt"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"receipt-data": receiptData, "password": secret}),
+        body: jsonEncode({
+          "receipt-data": receiptData,
+          "password": secret,
+          "user_email": userEmail,
+          "bito_token": token,  // ← ← تم إضافة التوكن هنا 🔥
+        }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          _showDialog("تم التفعيل ✅", "تم تفعيل ${data['plan']} بنجاح.");
+          _showSuccessAndGoToStudy();
         } else {
           _showDialog("فشل التحقق", data['message'] ?? "لم يتم التحقق من الإيصال.");
         }
@@ -517,6 +530,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       _showDialog("مشكلة في الشبكة", "حدث خطأ أثناء الاتصال بالخادم: $e");
     }
   }
+
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -744,10 +758,43 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       ),
     );
   }
-
+  void _showSuccessAndGoToStudy() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "مبروك! 🎉",
+          style: TextStyle(
+            color: Colors.deepPurple,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          "تم تفعيل الباقة بنجاح.\nيمكنك الآن استخدام جميع خدمات بيتو.",
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // إغلاق الرسالة
+              Navigator.pushReplacementNamed(context, "/study"); // الذهاب للصفحة
+            },
+            child: const Text(
+              "ابدأ الآن",
+              style: TextStyle(color: Colors.deepPurple),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   @override
   void dispose() {
     _subscription.cancel();
     super.dispose();
   }
 }
+
