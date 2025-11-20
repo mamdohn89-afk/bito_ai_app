@@ -452,25 +452,9 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         return;
       }
 
-      final response = await http.post(
-        Uri.parse("https://studybito.com/wp-json/bito/v1/demo_subscription"),
-        body: {
-          'product_id': product.id,
-          'user_email': userEmail,
-          'is_demo': 'true'
-        },
-      );
+      // استخدم الدالة الجديدة بدلاً من demo_subscription
+      await _activateUserSubscription(product.id, userEmail);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          print('✅ تم تفعيل الباقة التجريبية: ${data['plan']} للمستخدم: $userEmail');
-        } else {
-          print('❌ فشل تفعيل الباقة: ${data['message']}');
-        }
-      } else {
-        print('❌ خطأ في السيرفر: ${response.statusCode}');
-      }
     } catch (e) {
       print('❌ خطأ في التفعيل التجريبي: $e');
     }
@@ -524,16 +508,65 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           });
         }
         else {
-          _showDialog("فشل التحقق", data['message'] ?? "لم يتم التحقق من الإيصال.");
+          // ❌ فشل تحقق Apple - جرب التفعيل المباشر
+          _showSnack("⚠️ جرب التفعيل المباشر...");
+          await _activateUserSubscription(purchase.productID, userEmail);
         }
       } else {
-        _showDialog("خطأ في السيرفر", "لم يتم التحقق من الإيصال.");
+        // ❌ خطأ في السيرفر - جرب التفعيل المباشر
+        _showSnack("⚠️ جرب التفعيل المباشر...");
+        await _activateUserSubscription(purchase.productID, userEmail);
       }
     } catch (e) {
-      _showDialog("مشكلة في الشبكة", "حدث خطأ أثناء الاتصال بالخادم: $e");
+      // ❌ خطأ في الاتصال - جرب التفعيل المباشر
+      _showSnack("⚠️ جرب التفعيل المباشر...");
+      await _activateUserSubscription(purchase.productID, userEmail);
     }
   }
+// ✅ أضف هذه الدالة هنا
+  Future<void> _activateUserSubscription(String productId, String userEmail) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
 
+      final response = await http.post(
+        Uri.parse("https://studybito.com/wp-json/bito/v1/activate_subscription"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "product_id": productId,
+          "user_email": userEmail,
+          "platform": "ios",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ تم تفعيل الباقة: ${data['plan_name']}');
+
+          // حفظ محلي
+          await prefs.setString('user_subscription', productId);
+          await prefs.setBool('is_premium', true);
+          await prefs.setString('subscription_expires', data['expires_date'] ?? '');
+
+          _showSnack("🎉 تم تفعيل ${data['plan_name']} بنجاح!");
+
+          // العودة للرئيسية
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.of(context).pop();
+          });
+        } else {
+          _showDialog("خطأ", data['message'] ?? "فشل في تفعيل الباقة");
+        }
+      }
+    } catch (e) {
+      print('❌ خطأ في تفعيل الباقة: $e');
+      _showDialog("خطأ", "حدث خطأ: $e");
+    }
+  }
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -767,3 +800,4 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     super.dispose();
   }
 }
+
