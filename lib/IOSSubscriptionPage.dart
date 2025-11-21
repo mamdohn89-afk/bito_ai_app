@@ -481,7 +481,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     final token = prefs.getString('auth_token') ?? '';
     final userEmail = prefs.getString('user_email') ?? '';
     const secret = "06acbbcf779f421589311198fddf70ee";
-    final receiptData = purchase.verificationData.localVerificationData;
+    final receiptData = purchase.verificationData.serverVerificationData;
+    print("📦 Server Receipt: $receiptData");
 
     try {
       final response = await http.post(
