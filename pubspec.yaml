@@ -2,7 +2,7 @@ name: bito_ai_app
 description: "Bito AI WebView App"
 publish_to: 'none'
 
-version: 1.0.2+30
+version: 1.0.2+31
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
