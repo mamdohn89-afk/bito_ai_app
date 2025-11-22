@@ -4,20 +4,36 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 class IOSSubscriptionPage extends StatefulWidget {
   const IOSSubscriptionPage({super.key});
+
   @override
   State<IOSSubscriptionPage> createState() => _IOSSubscriptionPageState();
 }
+
 class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
-  List<String> debugLogs = [];
+  // ===============================
+  // 🔧 المتغيرات الأساسية
+  // ===============================
   final InAppPurchase _iap = InAppPurchase.instance;
   late StreamSubscription<List<PurchaseDetails>> _subscription;
   bool _loading = true;
   bool _storeAvailable = false;
   List<ProductDetails> _products = [];
   final List<String> _productIds = ['bito.weekly1', 'bito.monthly1', 'bito.yearly1'];
-// بيانات الباقات المعدلة بالريال السعودي
+
+  // 🔥 سجل الأخطاء المحسن
+  List<String> debugLogs = [];
+
+  void addLog(String text) {
+    debugLogs.add("${DateTime.now()}: $text");
+    print("🐞 DEBUG: $text");
+  }
+
+  // ===============================
+  // 🎭 بيانات الباقات التجريبية
+  // ===============================
   final List<Map<String, dynamic>> _demoProductsData = [
     {
       'id': 'bito.weekly1',
@@ -53,6 +69,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       'features': ['جميع الأدوات الذكية', 'تحميل غير محدود', 'دعم فني', '365 يوم', 'وفر 62%']
     },
   ];
+
   List<ProductDetails> get _demoProducts => _demoProductsData.map((data) {
     return ProductDetails(
       id: data['id'],
@@ -63,21 +80,82 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       currencyCode: data['currencyCode'],
     );
   }).toList();
+
+  // ===============================
+  // 🚀 التهيئة
+  // ===============================
   @override
   void initState() {
     super.initState();
     _initializeStore();
-    _subscription = _iap.purchaseStream.listen(_onPurchaseUpdate, onDone: () {
-      _subscription.cancel();
+    _startRobustPurchaseListener();
+    _startAutoVerification(); // 🔥 الجديد: التحقق التلقائي
+  }
+
+  void _startRobustPurchaseListener() {
+    addLog("🔊 بدء تشغيل الـ Stream المعزز...");
+
+    _subscription = _iap.purchaseStream.listen(
+          (List<PurchaseDetails> purchases) {
+        if (purchases.isNotEmpty) {
+          addLog("📥 استقبل الـ Stream ${purchases.length} عملية شراء");
+          addLog("🔄 حالة أول عملية: ${purchases.first.status}");
+        } else {
+          addLog("📥 استقبل الـ Stream ولكن القائمة فارغة");
+        }
+        _onPurchaseUpdate(purchases);
+      },
+      onError: (error) {
+        addLog("❌ خطأ في الـ Stream: $error");
+        _restartPurchaseListener();
+      },
+      onDone: () {
+        addLog("ℹ️ الـ Stream اكتمل - إعادة التشغيل...");
+        _restartPurchaseListener();
+      },
+      cancelOnError: false,
+    );
+  }
+
+  void _restartPurchaseListener() {
+    addLog("🔄 إعادة تشغيل الـ Stream...");
+    _subscription.cancel();
+    Future.delayed(const Duration(seconds: 2), () {
+      _startRobustPurchaseListener();
     });
   }
+
+  // 🔥 الجديد: التحقق التلقائي الدوري
+  void _startAutoVerification() {
+    Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!_loading && _storeAvailable) {
+        _checkForPendingPurchases();
+      }
+    });
+  }
+
+  Future<void> _checkForPendingPurchases() async {
+    try {
+      final response = await _iap.queryPastPurchases();
+      if (response.purchases.isNotEmpty) {
+        addLog("🔍 Auto-Check: وجد ${response.purchases.length} عملية شراء معلقة");
+        _onPurchaseUpdate(response.purchases);
+      }
+    } catch (e) {
+      addLog("❌ خطأ في التحقق التلقائي: $e");
+    }
+  }
+
+  // ===============================
+  // 🛒 تهيئة المتجر
+  // ===============================
   Future<void> _initializeStore() async {
     try {
-      print('🔄 جاري تهيئة متجر التطبيقات...');
+      addLog("🔄 بدء تهيئة متجر Apple...");
       final available = await _iap.isAvailable();
-      print('📱 حالة المتجر: $available');
+
       if (!available) {
-        print('⚠️ المتجر غير متاح - استخدام وضع المحاكاة');
+        addLog("⚠️ المتجر غير متاح → سيتم استخدام المحاكاة");
         if (mounted) {
           setState(() {
             _storeAvailable = false;
@@ -86,14 +164,16 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         }
         return;
       }
+
       if (mounted) {
         setState(() {
           _storeAvailable = true;
         });
       }
+
       await _loadProducts();
     } catch (e) {
-      print('❌ خطأ في تهيئة المتجر: $e');
+      addLog("❌ خطأ في تهيئة المتجر: $e");
       if (mounted) {
         setState(() {
           _storeAvailable = false;
@@ -102,27 +182,35 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       }
     }
   }
+
+  // ===============================
+  // 📦 تحميل المنتجات
+  // ===============================
   Future<void> _loadProducts() async {
     try {
-      print('🔄 جاري تحميل المنتجات...');
+      addLog("🔄 جاري تحميل المنتجات من Apple...");
       final response = await _iap.queryProductDetails(_productIds.toSet());
+
       if (mounted) {
         setState(() {
           _products = response.productDetails;
           _loading = false;
         });
       }
+
       if (response.error != null) {
-        print('⚠️ خطأ في تحميل المنتجات: ${response.error!.message}');
+        addLog("⚠️ خطأ في تحميل المنتجات: ${response.error!.message}");
       }
+
       if (response.notFoundIDs.isNotEmpty) {
-        print('⚠️ منتجات غير موجودة: ${response.notFoundIDs}');
+        addLog("⚠️ منتجات غير موجودة: ${response.notFoundIDs}");
       }
+
       if (response.productDetails.isNotEmpty) {
-        print('✅ تم تحميل ${response.productDetails.length} منتج');
+        addLog("✅ تم تحميل ${response.productDetails.length} منتج من Apple");
       }
     } catch (e) {
-      print('❌ خطأ في تحميل الباقات: $e');
+      addLog("❌ خطأ في تحميل الباقات: $e");
       if (mounted) {
         setState(() {
           _loading = false;
@@ -130,27 +218,44 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       }
     }
   }
+
+  // ===============================
+  // 🛒 بدء الشراء
+  // ===============================
   void _handlePurchase(ProductDetails product) async {
     if (!_storeAvailable) {
+      addLog("⚠️ المتجر غير متاح → تشغيل المحاكاة");
       _showPurchaseSimulation(product);
       return;
     }
+
     try {
-      print('🔄 بدء عملية الشراء: ${product.id}');
-      addLog("STEP 1: 🚀 بدأنا عملية الشراء من Flutter");
-      print("🚀 [DEBUG] بدء عملية الشراء الفعلية لمنتج: ${product.id}");
+      addLog("STEP 1: 🚀 بداية عملية الشراء الحقيقية");
+
       final purchaseParam = PurchaseParam(productDetails: product);
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+
+      // 🔥 الجديد: التحقق التلقائي بعد الشراء
+      Future.delayed(const Duration(seconds: 5), () {
+        addLog("🔄 التحقق التلقائي بعد الشراء...");
+        _checkForPendingPurchases();
+      });
+
     } catch (e) {
-      print('❌ خطأ في الشراء: $e');
+      addLog("❌ خطأ في بدء عملية الشراء: $e");
       _showDialog("خطأ في الشراء", "حدث خطأ أثناء عملية الشراء: ${e.toString()}");
     }
   }
+
+  // ===============================
+  // 🎭 محاكاة الشراء (من الكود القديم)
+  // ===============================
   void _showPurchaseSimulation(ProductDetails product) {
     final productData = _demoProductsData.firstWhere(
             (data) => data['id'] == product.id,
         orElse: () => _demoProductsData.first
     );
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -158,6 +263,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       builder: (context) => _buildPurchaseSheet(product, productData),
     );
   }
+
   Widget _buildPurchaseSheet(ProductDetails product, Map<String, dynamic> productData) {
     return Container(
       decoration: const BoxDecoration(
@@ -171,7 +277,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-// رأس نافذة الشراء
+          // رأس نافذة الشراء
           Container(
             width: 60,
             height: 4,
@@ -181,7 +287,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             ),
           ),
           const SizedBox(height: 20),
-// محاكاة واجهة Apple
+
+          // محاكاة واجهة Apple
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -191,10 +298,10 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             ),
             child: Column(
               children: [
-// رأس Apple
+                // رأس Apple
                 Row(
                   children: [
-                    Icon(Icons.apple, color: Colors.black, size: 28),
+                    const Icon(Icons.apple, color: Colors.black, size: 28),
                     const SizedBox(width: 8),
                     const Text(
                       "Confirm Purchase",
@@ -207,7 +314,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-// تفاصيل المنتج
+
+                // تفاصيل المنتج
                 Row(
                   children: [
                     Icon(productData['icon'] as IconData, color: Colors.deepPurple, size: 40),
@@ -246,7 +354,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
-// محاكاة Face ID
+
+                // محاكاة Face ID
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -274,8 +383,10 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               ],
             ),
           ),
+
           const SizedBox(height: 24),
-// أزرار التحكم
+
+          // أزرار التحكم
           Row(
             children: [
               Expanded(
@@ -316,8 +427,10 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               ),
             ],
           ),
+
           const SizedBox(height: 16),
-// رسالة توضيحية
+
+          // رسالة توضيحية
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -346,9 +459,11 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       ),
     );
   }
+
   void _showPurchaseSuccess(ProductDetails product) {
-// 🔥 تفعيل الباقة حتى في التجربة
+    // تفعيل الباقة حتى في التجربة
     _activateDemoSubscription(product);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -356,7 +471,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Column(
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 60),
+            const Icon(Icons.check_circle, color: Colors.green, size: 60),
             const SizedBox(height: 16),
             const Text(
               "تمت المحاكاة بنجاح",
@@ -410,61 +525,67 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       ),
     );
   }
+
   Future<void> _activateDemoSubscription(ProductDetails product) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userEmail = prefs.getString('user_email') ?? '';
+
       if (userEmail.isEmpty) {
-        print('❌ لم يتم العثور على إيميل المستخدم');
+        addLog('❌ لم يتم العثور على إيميل المستخدم');
         return;
       }
-// استخدم الدالة الجديدة بدلاً من demo_subscription
+
       await _activateUserSubscription(product.id, userEmail);
     } catch (e) {
-      print('❌ خطأ في التفعيل التجريبي: $e');
+      addLog('❌ خطأ في التفعيل التجريبي: $e');
     }
   }
+
+  // ===============================
+  // 📥 استقبال تحديثات Apple
+  // ===============================
   Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchases) async {
-    print("📥 [DEBUG] Apple أرسلت PurchaseDetails:");
-    print("STEP 2: 📥 وصل PurchaseDetails من Apple");
+    addLog("STEP 2: 📥 Apple أرسلت PurchaseDetails");
+
     for (var p in purchases) {
-      print(" - الحالة: ${p.status}");
-      print(" - المنتج: ${p.productID}");
-      print(" - pendingCompletePurchase: ${p.pendingCompletePurchase}");
-      print(" - هل يوجد verificationData؟ ${p.verificationData != null}");
-    }
-    for (var purchase in purchases) {
-      if (purchase.status == PurchaseStatus.purchased) {
-        print("📄 [DEBUG] Apple أرسلت إيصالاً:");
-        print("STEP 3: 📄 وصل إيصال Apple بنجاح");
-        print("receipt length: ${purchase.verificationData.serverVerificationData.length}");
-        print("receipt source: ${purchase.verificationData.source}");
-        print("receipt snippet: ${purchase.verificationData.serverVerificationData.substring(0, 80)}...");
-        _showSnack("✅ جاري التحقق من الدفع...");
-        await _verifyPurchaseWithServer(purchase);
-        if (purchase.pendingCompletePurchase) {
-          await _iap.completePurchase(purchase);
+      addLog(" - الحالة: ${p.status}");
+      addLog(" - المنتج: ${p.productID}");
+      addLog(" - يوجد إيصال؟ ${p.verificationData != null}");
+
+      if (p.status == PurchaseStatus.purchased) {
+        addLog("STEP 3: 📄 Apple أرسلت إيصال شراء");
+
+        await _verifyPurchaseWithServer(p);
+
+        if (p.pendingCompletePurchase) {
+          await _iap.completePurchase(p);
         }
-      } else if (purchase.status == PurchaseStatus.error) {
-        _showDialog("فشل العملية", purchase.error?.message ?? "حدث خطأ غير متوقع.");
-      } else if (purchase.status == PurchaseStatus.pending) {
+      }
+
+      if (p.status == PurchaseStatus.error) {
+        addLog("❌ خطأ في عملية الشراء: ${p.error?.message}");
+        _showDialog("فشل العملية", p.error?.message ?? "حدث خطأ غير متوقع.");
+      } else if (p.status == PurchaseStatus.pending) {
+        addLog("⏳ العملية قيد المعالجة...");
         _showSnack("⏳ العملية قيد المعالجة...");
       }
     }
   }
+
+  // ===============================
+  // 🌐 إرسال الإيصال للسيرفر
+  // ===============================
   Future<void> _verifyPurchaseWithServer(PurchaseDetails purchase) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
     final userEmail = prefs.getString('user_email') ?? '';
     const secret = "06acbbcf779f421589311198fddf70ee";
     final receiptData = purchase.verificationData.serverVerificationData;
-    print("🚀 [DEBUG] سيتم إرسال الإيصال للسيرفر الآن...");
-    print("STEP 4: 📦 إرسال الإيصال الآن إلى سيرفر WordPress");
-    print("📧 المستخدم: $userEmail");
-    print("📄 طول الإيصال: ${receiptData.length}");
-    print("📄 أول 120 حرف من الإيصال:");
-    print(receiptData.substring(0, 120));
-    print("📦 Server Receipt: $receiptData");
+
+    addLog("STEP 4: 📦 إرسال الإيصال إلى السيرفر");
+    addLog("Length: ${receiptData.length}");
+
     try {
       final response = await http.post(
         Uri.parse("https://studybito.com/wp-json/bito/v1/verify_ios_receipt"),
@@ -478,46 +599,49 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           "user_email": userEmail,
         }),
       );
-      print("📬 [DEBUG] رد السيرفر وصل:");
-      print("STEP 5: 📬 السيرفر رد على الطلب");
-      print("Status Code: ${response.statusCode}");
-      print("Body: ${response.body}");
+
+      addLog("STEP 5: 📬 رد السيرفر: ${response.statusCode}");
+      addLog(response.body);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
           _showSnack("🎉 تم تفعيل ${data['plan']} بنجاح!");
-// العودة للرئيسية بعد ثانيتين
+
+          // العودة للرئيسية بعد ثانيتين
           Future.delayed(const Duration(seconds: 2), () {
             Navigator.of(context).pop();
           });
-        }
-        else {
-// ❌ فشل تحقق Apple - جرب التفعيل المباشر
+        } else {
+          // ❌ فشل تحقق Apple - جرب التفعيل المباشر
+          addLog("⚠️ فشل تحقق Apple → تشغيل Fallback");
           _showSnack("⚠️ جرب التفعيل المباشر...");
           await _activateUserSubscription(purchase.productID, userEmail);
         }
       } else {
-// ❌ خطأ في السيرفر - جرب التفعيل المباشر
+        // ❌ خطأ في السيرفر - جرب التفعيل المباشر
+        addLog("⚠️ خطأ في السيرفر → تشغيل Fallback");
         _showSnack("⚠️ جرب التفعيل المباشر...");
         await _activateUserSubscription(purchase.productID, userEmail);
       }
-      print("📬 [DEBUG] رد السيرفر في Fallback:");
-      print("Status: ${response.statusCode}");
-      print("Body: ${response.body}");
     } catch (e) {
-// ❌ خطأ في الاتصال - جرب التفعيل المباشر
+      // ❌ خطأ في الاتصال - جرب التفعيل المباشر
+      addLog("❌ خطأ في الاتصال → تشغيل Fallback");
       _showSnack("⚠️ جرب التفعيل المباشر...");
       await _activateUserSubscription(purchase.productID, userEmail);
     }
   }
-// ✅ أضف هذه الدالة هنا
+
+  // ===============================
+  // 🔧 Fallback Manual Activation
+  // ===============================
   Future<void> _activateUserSubscription(String productId, String userEmail) async {
-    print("⚠️ [DEBUG] تشغيل التفعيل اليدوي Fallback للمنتج: $productId");
-    print("STEP 6: ⚠️ بدأ التفعيل اليدوي Fallback");
-    print("📧 المستخدم: $userEmail");
+    addLog("STEP 6: ⚠️ تفعيل Fallback للمنتج: $productId");
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
+
       final response = await http.post(
         Uri.parse("https://studybito.com/wp-json/bito/v1/activate_subscription"),
         headers: {
@@ -530,161 +654,44 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
           "platform": "ios",
         }),
       );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          print('✅ تم تفعيل الباقة: ${data['plan_name']}');
-// حفظ محلي
+          addLog('✅ تم تفعيل الباقة: ${data['plan_name']}');
+
+          // حفظ محلي
           await prefs.setString('user_subscription', productId);
           await prefs.setBool('is_premium', true);
           await prefs.setString('subscription_expires', data['expires_date'] ?? '');
+
           _showSnack("🎉 تم تفعيل ${data['plan_name']} بنجاح!");
-// العودة للرئيسية
+
+          // العودة للرئيسية
           Future.delayed(const Duration(seconds: 2), () {
             Navigator.of(context).pop();
           });
         } else {
+          addLog("❌ فشل Fallback: ${data['message']}");
           _showDialog("خطأ", data['message'] ?? "فشل في تفعيل الباقة");
         }
+      } else {
+        addLog("❌ فشل Fallback: ${response.body}");
       }
     } catch (e) {
-      print('❌ خطأ في تفعيل الباقة: $e');
+      addLog('❌ خطأ في تفعيل الباقة: $e');
       _showDialog("خطأ", "حدث خطأ: $e");
     }
   }
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.deepPurple,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-  void addLog(String text) {
-    debugLogs.add("${DateTime.now()}: $text");
-    print("🐞 DEBUG: $text");
-  }
-  void _showDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("موافق", style: TextStyle(color: Colors.deepPurple)),
-          ),
-        ],
-      ),
-    );
-  }
-  Widget _buildSimplePlan({
-    required String title,
-    required String price,
-    required String duration,
-    required VoidCallback onTap,
-    String? saveTag,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.deepPurple.withOpacity(0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-// العنوان + وسم التوفير
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-              ),
-              if (saveTag != null)
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade600,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    saveTag,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-// السعر
-          Text(
-            price,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 4),
-// المدة
-          Text(
-            duration,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 16),
-// زر الاشتراك
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                "اشترك الآن",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+  // ===============================
+  // 🎨 واجهة المستخدم
+  // ===============================
   @override
   Widget build(BuildContext context) {
     final bool isStoreAvailable = _storeAvailable && _products.isNotEmpty;
     final List<ProductDetails> displayProducts = isStoreAvailable ? _products : _demoProducts;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F7FF),
       appBar: AppBar(
@@ -716,13 +723,14 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       )
           : Column(
         children: [
+          // 🔥 زر عرض الأخطاء المحسن
           TextButton(
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  title: Text("الأخطاء (DEBUG)"),
-                  content: Container(
+                  title: const Text("سجل الأخطاء (DEBUG)"),
+                  content: SizedBox(
                     width: double.maxFinite,
                     height: 300,
                     child: SingleChildScrollView(
@@ -734,17 +742,28 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                     ),
                   ),
                   actions: [
+                    // 🔥 زر التحقق اليدوي
+                    ElevatedButton(
+                      onPressed: () {
+                        addLog("🔍 تحقق يدوي من المشتريات...");
+                        _checkForPendingPurchases();
+                        Navigator.pop(context);
+                      },
+                      child: const Text("🔍 تحقق يدوي"),
+                    ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text("إغلاق"),
+                      child: const Text("إغلاق"),
                     ),
                   ],
                 ),
               );
             },
-            child: Text("📄 عرض الأخطاء (DEBUG)", style: TextStyle(color: Colors.red)),
+            child: const Text("📄 عرض الأخطاء (DEBUG)",
+                style: TextStyle(color: Colors.red)),
           ),
-// ⭐ رسالة الاستخدام اللامحدود
+
+          // ⭐ رسالة الاستخدام اللامحدود
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(16),
@@ -764,7 +783,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               ),
             ),
           ),
-// 🟪 الباقة الأسبوعية
+
+          // 🟪 الباقات
           _buildSimplePlan(
             title: "الباقة الأسبوعية",
             price: "٢٩٫٩٩ ر.س",
@@ -773,7 +793,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               displayProducts.firstWhere((p) => p.id == "bito.weekly1"),
             ),
           ),
-// 🟪 الباقة الشهرية
+
           _buildSimplePlan(
             title: "الباقة الشهرية",
             price: "٧٩٫٩٩ ر.س",
@@ -782,7 +802,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
               displayProducts.firstWhere((p) => p.id == "bito.monthly1"),
             ),
           ),
-// 🟪 الباقة السنوية + وفر 69%
+
           _buildSimplePlan(
             title: "الباقة السنوية",
             price: "٢٩٩٫٩٩ ر.س",
@@ -796,10 +816,140 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       ),
     );
   }
+
+  Widget _buildSimplePlan({
+    required String title,
+    required String price,
+    required String duration,
+    required VoidCallback onTap,
+    String? saveTag,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.deepPurple.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // العنوان + وسم التوفير
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ),
+              if (saveTag != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    saveTag,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // السعر
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // المدة
+          Text(
+            duration,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // زر الاشتراك
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "اشترك الآن",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===============================
+  // 🎯 دوال المساعدة
+  // ===============================
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.deepPurple,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("موافق", style: TextStyle(color: Colors.deepPurple)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _subscription.cancel();
     super.dispose();
   }
 }
-
