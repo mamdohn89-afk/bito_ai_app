@@ -89,7 +89,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     super.initState();
     _initializeStore();
     _startRobustPurchaseListener();
-    _startAutoVerification(); // 🔥 الجديد: التحقق التلقائي
+    _startAutoVerification();
   }
 
   void _startRobustPurchaseListener() {
@@ -125,7 +125,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     });
   }
 
-  // 🔥 الجديد: التحقق التلقائي الدوري
+  // 🔥 التحقق التلقائي الدوري
   void _startAutoVerification() {
     Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!_loading && _storeAvailable) {
@@ -136,14 +136,53 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
   Future<void> _checkForPendingPurchases() async {
     try {
-      final response = await _iap.queryPastPurchases();
-      if (response.purchases.isNotEmpty) {
-        addLog("🔍 Auto-Check: وجد ${response.purchases.length} عملية شراء معلقة");
-        _onPurchaseUpdate(response.purchases);
+      addLog("🔄 جاري استعادة المشتريات...");
+      await _iap.restorePurchases();
+      addLog("✅ تم طلب استعادة المشتريات");
+    } catch (e) {
+      addLog("❌ خطأ في استعادة المشتريات: $e");
+    }
+  }
+
+  // 🔍 نظام تشخيص السبب الجديد
+  Future<void> _diagnosePurchaseFailure(ProductDetails product) async {
+    addLog("🔍 بدء تشخيص سبب فشل الشراء...");
+
+    // 1. فحص حالة المتجر
+    try {
+      final available = await _iap.isAvailable();
+      addLog("🏪 حالة المتجر: $available");
+      if (!available) {
+        addLog("❌ المتجر غير متاح - قد يكون مشكلة في الـ Sandbox");
+        return;
       }
     } catch (e) {
-      addLog("❌ خطأ في التحقق التلقائي: $e");
+      addLog("❌ خطأ في فحص المتجر: $e");
     }
+
+    // 2. فحص المنتج
+    try {
+      final response = await _iap.queryProductDetails({product.id});
+      if (response.productDetails.isEmpty) {
+        addLog("❌ المنتج غير موجود: ${product.id}");
+        addLog("⚠️ تأكد من تفعيل الباقة في App Store Connect");
+      } else {
+        addLog("✅ المنتج موجود وجاهز: ${response.productDetails.first.id}");
+      }
+    } catch (e) {
+      addLog("❌ خطأ في فحص المنتج: $e");
+    }
+
+    // 3. فحص المشتريات السابقة
+    try {
+      addLog("🔄 فحص المشتريات السابقة...");
+      await _iap.restorePurchases();
+      addLog("✅ تم طلب استعادة المشتريات - انتظر الـ Stream");
+    } catch (e) {
+      addLog("❌ خطأ في استعادة المشتريات: $e");
+    }
+
+    addLog("📋 التشخيص اكتمل - راجع النتائج أعلاه");
   }
 
   // ===============================
@@ -235,10 +274,18 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       final purchaseParam = PurchaseParam(productDetails: product);
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
 
-      // 🔥 الجديد: التحقق التلقائي بعد الشراء
+      // 🔥 التحقق التلقائي بعد الشراء
       Future.delayed(const Duration(seconds: 5), () {
         addLog("🔄 التحقق التلقائي بعد الشراء...");
         _checkForPendingPurchases();
+      });
+
+      // 🔍 التشخيص التلقائي بعد 10 ثواني إذا توقف عند STEP 1
+      Future.delayed(const Duration(seconds: 10), () {
+        if (debugLogs.last.contains("STEP 1") && !debugLogs.any((log) => log.contains("STEP 2"))) {
+          addLog("🚨 كشف توقف عند STEP 1 - بدء التشخيص التلقائي");
+          _diagnosePurchaseFailure(product);
+        }
       });
 
     } catch (e) {
@@ -248,7 +295,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   }
 
   // ===============================
-  // 🎭 محاكاة الشراء (من الكود القديم)
+  // 🎭 محاكاة الشراء
   // ===============================
   void _showPurchaseSimulation(ProductDetails product) {
     final productData = _demoProductsData.firstWhere(
@@ -742,14 +789,16 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                     ),
                   ),
                   actions: [
-                    // 🔥 زر التحقق اليدوي
+                    // 🔥 زر التشخيص اليدوي
                     ElevatedButton(
                       onPressed: () {
-                        addLog("🔍 تحقق يدوي من المشتريات...");
-                        _checkForPendingPurchases();
+                        addLog("🔍 تشخيص يدوي للنظام...");
+                        if (displayProducts.isNotEmpty) {
+                          _diagnosePurchaseFailure(displayProducts.first);
+                        }
                         Navigator.pop(context);
                       },
-                      child: const Text("🔍 تحقق يدوي"),
+                      child: const Text("🔍 تشخيص النظام"),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
