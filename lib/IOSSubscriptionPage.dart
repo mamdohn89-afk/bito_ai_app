@@ -600,8 +600,9 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       addLog(" - المنتج: ${p.productID}");
       addLog(" - يوجد إيصال؟ ${p.verificationData != null}");
 
-      if (p.status == PurchaseStatus.purchased) {
-        addLog("STEP 3: 📄 Apple أرسلت إيصال شراء");
+// 🔥 إرسال الإيصال في جميع حالات النجاح
+      if (p.status == PurchaseStatus.purchased || p.status == PurchaseStatus.restored) {
+        addLog("STEP 3: 📄 Apple أرسلت إيصال ${p.status == PurchaseStatus.purchased ? 'شراء' : 'استعادة'}");
 
         await _verifyPurchaseWithServer(p);
 
@@ -1002,3 +1003,4 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     super.dispose();
   }
 }
+
