@@ -20,6 +20,15 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
   List<ProductDetails> _products = [];
   final List<String> _productIds = ['bito.weekly1', 'bito.monthly1', 'bito.yearly1'];
 
+  // ⭐ DEBUG LOG
+  String debugLog = "";
+
+  void addLog(String text) {
+    setState(() {
+      debugLog += "$text\n\n";
+    });
+    debugPrint(text);
+  }
 
   // بيانات الباقات المعدلة بالريال السعودي
   final List<Map<String, dynamic>> _demoProductsData = [
@@ -80,13 +89,13 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
   Future<void> _initializeStore() async {
     try {
-      print('🔄 جاري تهيئة متجر التطبيقات...');
+      addLog('🔄 جاري تهيئة متجر التطبيقات...');
 
       final available = await _iap.isAvailable();
-      print('📱 حالة المتجر: $available');
+      addLog('📱 حالة المتجر: $available');
 
       if (!available) {
-        print('⚠️ المتجر غير متاح - لن يتمكن المستخدم من الشراء الآن');
+        addLog('⚠️ المتجر غير متاح');
         if (mounted) {
           setState(() {
             _storeAvailable = false;
@@ -103,9 +112,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       }
 
       await _loadProducts();
-
     } catch (e) {
-      print('❌ خطأ في تهيئة المتجر: $e');
+      addLog('❌ خطأ في تهيئة المتجر: $e');
       if (mounted) {
         setState(() {
           _storeAvailable = false;
@@ -117,7 +125,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
   Future<void> _loadProducts() async {
     try {
-      print('🔄 جاري تحميل المنتجات...');
+      addLog('🔄 جاري تحميل المنتجات...');
 
       final response = await _iap.queryProductDetails(_productIds.toSet());
 
@@ -129,19 +137,18 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       }
 
       if (response.error != null) {
-        print('⚠️ خطأ في تحميل المنتجات: ${response.error!.message}');
+        addLog('⚠️ خطأ في تحميل المنتجات: ${response.error!.message}');
       }
 
       if (response.notFoundIDs.isNotEmpty) {
-        print('⚠️ منتجات غير موجودة: ${response.notFoundIDs}');
+        addLog('⚠️ منتجات غير موجودة: ${response.notFoundIDs}');
       }
 
       if (response.productDetails.isNotEmpty) {
-        print('✅ تم تحميل ${response.productDetails.length} منتج');
+        addLog('✅ تم تحميل ${response.productDetails.length} منتج');
       }
-
     } catch (e) {
-      print('❌ خطأ في تحميل الباقات: $e');
+      addLog('❌ خطأ في تحميل المنتجات: $e');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -149,7 +156,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       }
     }
   }
-// 🔥 🔥 🔥 أضف هذا الكود هنا مباشرة بعد _loadProducts 🔥 🔥 🔥
+
   ProductDetails _getProductById(String productId) {
     final bool isStoreAvailable = _storeAvailable && _products.isNotEmpty;
     final List<ProductDetails> displayProducts = isStoreAvailable ? _products : _demoProducts;
@@ -163,45 +170,39 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       return _demoProducts.firstWhere((p) => p.id == productId);
     }
   }
-// 🔥 🔥 🔥 نهاية الإضافة 🔥 🔥 🔥
 
   void _handlePurchase(ProductDetails product) async {
-    // نتأكد أن المتجر متاح وأن المنتج موجود فعليًا في قائمة المنتجات القادمة من Apple
-    final bool productExists =
-    _products.any((p) => p.id == product.id);
+    final bool productExists = _products.any((p) => p.id == product.id);
 
     if (!_storeAvailable || !productExists) {
       _showDialog(
         "المشتريات غير متاحة",
-        "المشتريات داخل التطبيق غير متاحة حاليًا. يرجى المحاولة لاحقًا.",
+        "المشتريات داخل التطبيق غير متاحة حاليًا.",
       );
       return;
     }
 
     try {
-      print('🔄 بدء عملية الشراء: ${product.id}');
+      addLog('🔄 بدء عملية الشراء: ${product.id}');
       final purchaseParam = PurchaseParam(productDetails: product);
       await _iap.buyNonConsumable(purchaseParam: purchaseParam);
     } catch (e) {
-      print('❌ خطأ في الشراء: $e');
-      _showDialog(
-        "خطأ في الشراء",
-        "حدث خطأ أثناء عملية الشراء: ${e.toString()}",
-      );
+      addLog('❌ خطأ في الشراء: $e');
+      _showDialog("خطأ في الشراء", e.toString());
     }
   }
-
 
   Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchases) async {
     for (var purchase in purchases) {
       if (purchase.status == PurchaseStatus.purchased) {
-        _showSnack("✅ جاري التحقق من الدفع...");
+        _showSnack("⏳ جاري التحقق من الدفع...");
         await _verifyPurchaseWithServer(purchase);
         if (purchase.pendingCompletePurchase) {
           await _iap.completePurchase(purchase);
         }
       } else if (purchase.status == PurchaseStatus.error) {
-        _showDialog("فشل العملية", purchase.error?.message ?? "حدث خطأ غير متوقع.");
+        addLog("❌ Purchase Error: ${purchase.error?.message}");
+        _showDialog("فشل العملية", purchase.error?.message ?? "خطأ غير معروف");
       } else if (purchase.status == PurchaseStatus.pending) {
         _showSnack("⏳ العملية قيد المعالجة...");
       }
@@ -213,8 +214,9 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
     final token = prefs.getString('auth_token') ?? '';
     final userEmail = prefs.getString('user_email') ?? '';
     const secret = "06acbbcf779f421589311198fddf70ee";
+
     final receiptData = purchase.verificationData.serverVerificationData;
-    print("📦 Server Receipt: $receiptData");
+    addLog("📦 RECEIPT: $receiptData");
 
     try {
       final response = await http.post(
@@ -231,37 +233,30 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         }),
       );
 
+      addLog("📡 Server Code: ${response.statusCode}");
+      addLog("📡 Server Body: ${response.body}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         if (data['success'] == true) {
           _showSnack("🎉 تم تفعيل ${data['plan']} بنجاح!");
-
-          // 🔥 حفظ البيانات المحلي - الإضافة المهمة
           await prefs.setString('user_subscription', data['product_id']);
           await prefs.setBool('is_premium', true);
           await prefs.setString('subscription_expires', data['expires_date'] ?? '');
 
-          // العودة الآمنة للرئيسية بعد ثانيتين
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted && Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             }
           });
         }
-        else {
-          // ❌ فشل تحقق Apple - جرب التفعيل المباشر
-
-        }
-      } else {
-        // ❌ خطأ في السيرفر - جرب التفعيل المباشر
-
       }
     } catch (e) {
-      // ❌ خطأ في الاتصال - جرب التفعيل المباشر
-
+      addLog("❌ Server Error: $e");
     }
   }
-// ✅ أضف هذه الدالة هنا
+
   Future<void> _activateUserSubscription(String productId, String userEmail) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -280,33 +275,30 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
         }),
       );
 
+      addLog("📡 Manual Activate Response: ${response.body}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          print('✅ تم تفعيل الباقة: ${data['plan_name']}');
-
-          // حفظ محلي
           await prefs.setString('user_subscription', productId);
           await prefs.setBool('is_premium', true);
           await prefs.setString('subscription_expires', data['expires_date'] ?? '');
 
           _showSnack("🎉 تم تفعيل ${data['plan_name']} بنجاح!");
 
-          // العودة للرئيسية
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted && Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             }
           });
-        } else {
-          _showDialog("خطأ", data['message'] ?? "فشل في تفعيل الباقة");
         }
       }
     } catch (e) {
-      print('❌ خطأ في تفعيل الباقة: $e');
+      addLog("❌ Manual Activate Error: $e");
       _showDialog("خطأ", "حدث خطأ: $e");
     }
   }
+
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -322,7 +314,8 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+        title: Text(title,
+            style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
         content: Text(message),
         actions: [
           TextButton(
@@ -359,7 +352,6 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // العنوان + وسم التوفير
           Row(
             children: [
               Expanded(
@@ -372,22 +364,16 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                   ),
                 ),
               ),
-
               if (saveTag != null)
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade600,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     saveTag,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -395,7 +381,6 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
           const SizedBox(height: 10),
 
-          // السعر
           Text(
             price,
             style: const TextStyle(
@@ -407,18 +392,11 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
           const SizedBox(height: 4),
 
-          // المدة
-          Text(
-            duration,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
+          Text(duration,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
 
           const SizedBox(height: 16),
 
-          // زر الاشتراك
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -427,9 +405,7 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
                 backgroundColor: Colors.deepPurple,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text(
                 "اشترك الآن",
@@ -478,7 +454,6 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
       )
           : Column(
         children: [
-          // ⭐ رسالة الاستخدام اللامحدود
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(16),
@@ -499,34 +474,47 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
             ),
           ),
 
-          // 🟪 الباقة الأسبوعية
           _buildSimplePlan(
             title: "الباقة الأسبوعية",
             price: "٢٩٫٩٩ ر.س",
             duration: "7 أيام",
-            onTap: () => _handlePurchase(
-                _getProductById("bito.weekly1")
-            ),
+            onTap: () => _handlePurchase(_getProductById("bito.weekly1")),
           ),
 
-          // 🟪 الباقة الشهرية
           _buildSimplePlan(
             title: "الباقة الشهرية",
             price: "٧٩٫٩٩ ر.س",
             duration: "30 يوم",
-            onTap: () => _handlePurchase(
-              _getProductById("bito.monthly1"),
-            ),
+            onTap: () => _handlePurchase(_getProductById("bito.monthly1")),
           ),
 
-          // 🟪 الباقة السنوية + وفر 69%
           _buildSimplePlan(
             title: "الباقة السنوية",
             price: "٢٩٩٫٩٩ ر.س",
             duration: "365 يوم",
             saveTag: "🔥 وفر 69%",
-            onTap: () => _handlePurchase(
-              _getProductById("bito.yearly1"),
+            onTap: () => _handlePurchase(_getProductById("bito.yearly1")),
+          ),
+
+          // ⭐ DEBUG LOG BOX
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SingleChildScrollView(
+                child: Text(
+                  debugLog.isEmpty ? "🔍 Waiting for logs..." : debugLog,
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                  ),
+                ),
+              ),
             ),
           ),
         ],
