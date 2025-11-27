@@ -217,6 +217,16 @@ class _IOSSubscriptionPageState extends State<IOSSubscriptionPage> {
 
     final receiptData = purchase.verificationData.serverVerificationData;
     addLog("📦 RECEIPT: $receiptData");
+// ⭐ افتح صفحة عرض الإيصال
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptDebugPage(
+          receipt: receiptData,
+          logs: debugLog,
+        ),
+      ),
+    );
 
     try {
       final response = await http.post(

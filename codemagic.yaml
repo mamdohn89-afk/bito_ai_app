@@ -1,30 +1,32 @@
 workflows:
   ios-release:
-    name: iOS Release Build
+    name: "iOS Release Build"
+    max_build_duration: 60
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
-        APP_STORE_CONNECT_KEY_ID: "6VQ58FRT3T"
-        APP_STORE_CONNECT_ISSUER_ID: "26d221d5-8e05-4afb-9981-384cf9e02dd0"
-      signing:
-        xcode: auto
+        APP_STORE_CONNECT_KEY_ID: $APP_STORE_CONNECT_KEY_ID
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
 
     scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
+      - name: Install dependencies
+        script: |
+          flutter pub get
 
-      - name: Build iOS release
-        script: flutter build ipa --release
+      - name: Build iOS Release
+        script: |
+          flutter build ipa --release --no-codesign
 
     artifacts:
       - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
+        apple_id: "YOUR_APPLE_ID_EMAIL"
+        api_key_id: $APP_STORE_CONNECT_KEY_ID
+        api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
-        skip_waiting_for_build_processing: false
