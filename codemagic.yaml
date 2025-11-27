@@ -2,12 +2,13 @@ workflows:
   ios-release:
     name: "iOS Release Build"
     max_build_duration: 60
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       groups:
-        - app
+        - app   # هنا نقول لكود ماجيك استخدم المتغيرات الموجودة في مجموعة app
 
     scripts:
       - name: Install dependencies
@@ -24,6 +25,6 @@ workflows:
     publishing:
       app_store_connect:
         api_key_id: $APP_STORE_CONNECT_KEY_ID
-        api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID     # ← التصحيح هنا
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         submit_to_testflight: true
