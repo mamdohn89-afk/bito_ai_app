@@ -2,7 +2,6 @@ workflows:
   ios-release:
     name: "iOS Release Build"
     max_build_duration: 60
-
     environment:
       flutter: stable
       xcode: latest
@@ -22,13 +21,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        issuer_id: "26d221d5-8e05-4afb-9981-384cf9e02dd0"
-        key_id: "L75442LLY"
-        private_key: |
-          -----BEGIN PRIVATE KEY-----
-          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgSMh8zGkcyG8eSBWH
-          uVUMeEL6bTk3rTyfR1MPi068DIOgCgYIKoZIzj0DAQehRANCAAQQYkdQV9KdfCPh
-          qyFQ7vCHiy5l/9u6q7AeXjpepYEYVB2U8NW4p4+5j6JpE1SIFRRBJFXLogmp/gxX
-          vOqxXBDP
-          -----END PRIVATE KEY-----
+        api_key: $APPSTORE_API_KEY
+        key_id: "L75442LLY"              # ← ضع الـ KEY ID الخاص بك
+        issuer_id: "26d221d5-8e05-4afb-9981-384cf9e02dd0"   # ← ضع الـ Issuer ID الخاص بك
         submit_to_testflight: true
