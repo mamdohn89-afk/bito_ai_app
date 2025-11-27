@@ -6,6 +6,9 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      vars:
+        DEVELOPMENT_TEAM: "TNN6AXVF42"   # ← مهم جداً لحل مشكلة البيلد
+        APPSTORE_API_KEY: $APPSTORE_API_KEY
 
     scripts:
       - name: Install dependencies
@@ -14,7 +17,7 @@ workflows:
 
       - name: Build iOS Release
         script: |
-          flutter build ipa --release --no-codesign
+          flutter build ipa --release --codesign
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -22,6 +25,6 @@ workflows:
     publishing:
       app_store_connect:
         api_key: $APPSTORE_API_KEY
-        key_id: "L75442LLY"              # ← ضع الـ KEY ID الخاص بك
-        issuer_id: "26d221d5-8e05-4afb-9981-384cf9e02dd0"   # ← ضع الـ Issuer ID الخاص بك
+        key_id: "L75442LLY"
+        issuer_id: "26d221d5-8e05-4afb-9981-384cf9e02dd0"
         submit_to_testflight: true
