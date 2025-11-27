@@ -2,14 +2,11 @@ workflows:
   ios-release:
     name: "iOS Release Build"
     max_build_duration: 60
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
-      vars:
-        APP_STORE_CONNECT_KEY_ID: $APP_STORE_CONNECT_KEY_ID
-        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
-        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
 
     scripts:
       - name: Install dependencies
@@ -25,8 +22,13 @@ workflows:
 
     publishing:
       app_store_connect:
-        apple_id: "YOUR_APPLE_ID_EMAIL"
-        api_key_id: $APP_STORE_CONNECT_KEY_ID
-        api_key_issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        issuer_id: "26d221d5-8e05-4afb-9981-384cf9e02dd0"
+        key_id: "L75442LLY"
+        private_key: |
+          -----BEGIN PRIVATE KEY-----
+          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgSMh8zGkcyG8eSBWH
+          uVUMeEL6bTk3rTyfR1MPi068DIOgCgYIKoZIzj0DAQehRANCAAQQYkdQV9KdfCPh
+          qyFQ7vCHiy5l/9u6q7AeXjpepYEYVB2U8NW4p4+5j6JpE1SIFRRBJFXLogmp/gxX
+          vOqxXBDP
+          -----END PRIVATE KEY-----
         submit_to_testflight: true
